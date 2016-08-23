@@ -371,9 +371,14 @@ ISR(TIMER0_OVF_vect)
 				PORT_DEBUG |= _BV(PIN_DEBUG); // debug, indicate loop
 
 				// TODO: Insert BYTE to be sent here
-				fifo_get_data(&infifo, &fetched, 1);
-				//fifo_get_data(&mbus_outfifo, &fetched, 1);
-
+				//fifo_get_data(&infifo, &fetched, 1);
+				fetched = fifo_get_nowait(&infifo);
+#if 0
+				if (fetched < '0' || fetched > '9')
+					break;
+				if (fetched < 'A' || fetched > 'F')
+					break;
+#endif
 				tx_packet.cur_nibble = hex2int(fetched);
 
 			} while (fetched != '\r' && tx_packet.cur_nibble == 0xFF);
