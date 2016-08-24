@@ -104,7 +104,7 @@ typedef struct
 	} state;
 	char rxbits[4]; 	// received bits as chars
 	uint8_t num_bits; 	// # of received bits
-	//volatile uint8_t num_bytes;	// # of stored bytes in buffer
+	volatile uint8_t num_bytes;	// # of stored bytes in buffer
 } mbus_rx_t; 
 
 

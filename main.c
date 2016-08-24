@@ -104,8 +104,8 @@ int main (void) {
 
 
     
-    uint8_t new_uart = 0;
-    //uint8_t new_mbus = 0;
+    static uint8_t new_uart = 0;
+    static uint8_t new_mbus = 0;
 
 
     for (;;) {
@@ -114,18 +114,18 @@ int main (void) {
         new_uart = uart_searchbuffer('\r');
         //new_mbus = mbus_searchbuffer('\r');
 
-#if 0
+#if 1
         /* Decode received packet */
-        if (new_mbus) {
+        if (mbus_searchbuffer('\r')){
 
-            mbus_decode(&packet, &mbus_inbuffer);
+            mbus_decode(&packet, mbus_inbuffer);
 
-            //memset(&mbus_outbuffer, 0, sizeof(mbus_outbuffer));
+            memset(&mbus_outbuffer, 0, sizeof(mbus_outbuffer));
 
-            //mbus_process(mbus_inbuffer, &packet, mbus_outbuffer);
+            mbus_process(mbus_inbuffer, &packet, mbus_outbuffer);
 
-            new_mbus = 0;
-            memset(&mbus_inbuffer, 0, sizeof(mbus_inbuffer));
+            new_mbus = 1;
+            //memset(&mbus_inbuffer, 0, sizeof(mbus_inbuffer));
         }
 #endif
 
@@ -134,7 +134,7 @@ int main (void) {
         /* check if there is a command to be sent */
         if (!(TIMSK & _BV(TOIE0))                       // not already sending
             && rx_packet.state == wait                  // not receiving
-            && ( new_uart ) //|| new_mbus )             // newline in receive buffers
+            && ( new_uart || new_mbus )                 // newline in receive buffers
             ) {
 
 
@@ -143,6 +143,8 @@ int main (void) {
             TCCR0  = ((1 << CS01) | (1 << CS02));   // slow prescaling while sending
             TCNT0 = 0;                              // reset timer because ISR only offsets to it
             TIMSK |= _BV(TOIE0);                    // start the output handler with timer0
+
+            new_mbus = 0;
         }
 
 

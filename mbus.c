@@ -18,7 +18,7 @@
 #include "uart.h"         	// my UART "driver"
 
 #include "log.h"
-
+#include "display.h"
 
 
 
@@ -227,9 +227,10 @@ void init_mbus (void)
 
 	/* FIFOs für Ein- und Ausgabe initialisieren */ 
     //fifo_init(&mbus_infifo, mbus_inbuffer, MBUS_BUFFER);
-    //fifo_init(&mbus_outfifo, mbus_outbuffer, MBUS_BUFFER);
     memset(&mbus_inbuffer, 0, sizeof(mbus_inbuffer));
-    //rx_packet.num_bytes = 0;
+    
+    //fifo_init(&mbus_outfifo, mbus_outbuffer, MBUS_BUFFER);
+    rx_packet.num_bytes = 0;
 }
 
 
@@ -309,12 +310,14 @@ ISR(TIMER1_CAPT_vect)
 
 			/* Store received data into UART fifo as HEX-DIGIT 0..9-A..F and send it out */
 			uint8_t value = int2hex(uHexDigit);
+			//uint8_t value = uHexDigit;
 			uint8_t *res_ptr = &value;
+			
 			uart_write(res_ptr, 1); // sending here gives hex
 			
 			/* Store received data into DECODER buffer */
-			//mbus_inbuffer[rx_packet.num_bytes] = value;
-			//rx_packet.num_bytes++;
+			mbus_inbuffer[rx_packet.num_bytes] = value;
+			rx_packet.num_bytes++;
 			//_inline_fifo_put(&mbus_infifo, value);
 		}
 
@@ -340,11 +343,22 @@ ISR(TIMER1_COMPA_vect)
 	if ((rx_packet.num_bits % 4) != 0) 			// there should be no data waiting for output
 		uart_write((uint8_t *)('X'), 1); 		// but if, then mark it
 
-	uart_write((uint8_t *)LINE_FEED, strlen(LINE_FEED));
+	//uart_write((uint8_t *)LINE_FEED, strlen(LINE_FEED));
 
-	//_inline_fifo_put(&mbus_infifo, '\r');
-	//mbus_inbuffer[rx_packet.num_bytes] = '\r';
+	if (rx_packet.num_bytes > 2 && rx_packet.num_bits % 4 == 0) {
+		mbus_inbuffer[rx_packet.num_bytes] = '\r';		// insert final newline char
+		//rx_packet.num_bytes++;							
+		//LOG_DEBUG("%d", rx_packet.num_bytes);
+		//uart_write((uint16_t *)rx_packet.num_bytes, 1);
+		uart_write((uint8_t *)LINE_FEED, strlen(LINE_FEED));
+		display_cursor(1,1);
+		//display_printf("%d", rx_packet.num_bytes);
+		rx_packet.num_bytes = 0;
+	}
+	
 	//rx_packet.num_bytes = 0;
+	//_inline_fifo_put(&mbus_infifo, '\r');
+	//uart_write((uint8_t *)rx_packet.num_bytes, 1);
 
 }
 
@@ -371,7 +385,17 @@ ISR(TIMER0_OVF_vect)
 
 				// TODO: Insert BYTE to be sent here
 				//fifo_get_data(&infifo, &fetched, 1);
-				fetched = fifo_get_nowait(&infifo);
+
+				/*
+
+An dieser Stelle müssen die Bytes aus dem Array mbus_outbuffer[] EINZELN geholt werden, damit sie gesendet werden können.
+
+				*/
+				
+
+
+				/* UART */
+				//fetched = fifo_get_nowait(&infifo);		// Version for UART input
 #if 0
 				if (fetched < '0' || fetched > '9')
 					break;
@@ -435,7 +459,6 @@ ISR(TIMER0_OVF_vect)
 // use acRaw member to generate the others
 uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 {
-#if 0
 	size_t len = strlen(packet_src);
 	size_t i, j;
 	
@@ -454,15 +477,19 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 	mbuspacket->seconds = 0;
 	mbuspacket->flags = 0;
 
-	LOG_DEBUG("%d", len);
-
 	if (len < 3)
 		return 0xFF;
 
 	len--;	// remove last '\r'
-	mbuspacket->source = (source_t)hex2int(packet_src[0]); // determine source from first digit
+	len--;	// remove checksum
+	mbuspacket->source = (source_t)(hex2int(packet_src[0])); // determine source from first digit
 	mbuspacket->chksum = calc_checksum(packet_src, len);
 	mbuspacket->chksumOK = (mbuspacket->chksum == hex2int(packet_src[len])); // verify checksum
+
+
+	//display_printf("%d", len);
+	//display_printf("%d", mbuspacket->chksumOK);
+
 
 	for (i = 0; i < sizeof(alpine_codetable) / sizeof(*alpine_codetable); i++) {
 		// try all commands
@@ -521,17 +548,24 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 			mbuspacket->cmd = alpine_codetable[i].cmd;
 			mbuspacket->description = alpine_codetable[i].infotext;
 
+			display_printf(" %s", mbuspacket->description);
 
-			LOG_DEBUG("%s", mbuspacket->description);
+			//LOG_DEBUG("%s", mbuspacket->description);
 
-			uart_write((uint8_t *)LINE_FEED, strlen(LINE_FEED));
+			uart_write((uint8_t *)"R", 1);	// Radio sent this message
+
 
 			break; // exit the command loop
 		}
 	}
+
+
+	// clear incoming buffer
+    //fifo_init(&mbus_infifo, mbus_inbuffer, MBUS_BUFFER);
+    memset(&mbus_inbuffer, 0, sizeof(mbus_inbuffer));
 	return (mbuspacket->cmd == eInvalid) ? 0xFF : 0;
-#endif
-	return 0;
+
+
 }
 
 
@@ -605,6 +639,8 @@ uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest)
 	int8_t checksum = calc_checksum(pkt_writeout, len);
 	pkt_writeout[len] = int2hex(checksum); 	// add checksum
 	pkt_writeout[len+1] = '\0'; 			// string termination
+
+	uart_write((uint8_t *)"S", 1);
 	
 	return hr;
 }
@@ -633,6 +669,9 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 
 	// check for echo
 	if (echo_waitstate && inpacket != NULL) {
+
+		uart_write((uint8_t *)"H", 1);
+
 		// I should have received my own packet string back. If not, there might be a collision?
 		if (strcmp(last_sent, raw_received) == 0) {
 			// OK, we might send the next if desired
@@ -692,6 +731,8 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 	
 	if (inpacket == NULL) {	// response from timer, not by reception (could be a seperate function in future)
 
+		uart_write((uint8_t *)"N", 1);
+
 		switch (echostate) {
 
 		case playing:
@@ -722,6 +763,9 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 
 	// check if intact and for us
 	if (inpacket != NULL && (!inpacket->chksumOK || inpacket->source != eRadio)) {	// broken packet
+
+		uart_write((uint8_t *)"B", 1);
+
 		return 0; // ignore for now
 	}
 	
