@@ -307,9 +307,8 @@ ISR(TIMER1_CAPT_vect)
 					uHexDigit = 0xFF; // mark error
 			}
 
+			/* Store received data into UART fifo as HEX-DIGIT 0..9-A..F and send it out */
 			uint8_t value = int2hex(uHexDigit);
-
-			/* Store received data into UART fifo and send it out */
 			uint8_t *res_ptr = &value;
 			uart_write(res_ptr, 1); // sending here gives hex
 			

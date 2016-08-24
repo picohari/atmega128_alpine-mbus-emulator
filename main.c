@@ -104,14 +104,14 @@ int main (void) {
 
 
     
-    //uint8_t new_uart = 0;
+    uint8_t new_uart = 0;
     //uint8_t new_mbus = 0;
 
 
     for (;;) {
 
 
-        //new_uart = uart_searchbuffer('\r');
+        new_uart = uart_searchbuffer('\r');
         //new_mbus = mbus_searchbuffer('\r');
 
 #if 0
@@ -134,7 +134,7 @@ int main (void) {
         /* check if there is a command to be sent */
         if (!(TIMSK & _BV(TOIE0))                       // not already sending
             && rx_packet.state == wait                  // not receiving
-            && ( uart_searchbuffer('\r') ) //|| new_mbus )                 // newline in receive buffers
+            && ( new_uart ) //|| new_mbus )             // newline in receive buffers
             ) {
 
 
