@@ -360,7 +360,7 @@ ISR(TIMER0_OVF_vect)
 	case start: // start of a bit, or maybe the packet
 
 		// disable capture and compare match interrupt for timer 1
-		TIMSK &= ~( (1 << TICIE1) | (1 << OCIE1A) );
+		//TIMSK &= ~( (1 << TICIE1) | (1 << OCIE1A) );
 
 		if (tx_packet.num_bits % 4 == 0) {		// need a new hex nibble
 
@@ -425,7 +425,7 @@ ISR(TIMER0_OVF_vect)
 		tx_packet.num_bits = 0; 	// reset the bit counter again
 
 		// enable capture and compare match interrupt for timer 1
-		TIMSK |= (1 << TICIE1) | (1 << OCIE1A) ;
+		//TIMSK |= (1 << TICIE1) | (1 << OCIE1A) ;
 
 		break;
 	}
