@@ -36,15 +36,25 @@
 #endif
 
 
-
+#if 0
 // in timer ticks (SYSCLK / prescaler = 34.722 us)
-#define DEFAULT_ZERO_TIME 38  	// low pulse 0.6 ms: "0" bit
-#define DEFAULT_ONE_TIME  112 	// low pulse 1.9 ms: "1" bit
+#define DEFAULT_ZERO_TIME 37  	// low pulse 0.6 ms: "0" bit
+#define DEFAULT_ONE_TIME  111 	// low pulse 1.9 ms: "1" bit
 #define DEFAULT_BIT_TIME  187 	// time for a full bit cycle
 
-#define DEFAULT_TOLERANCE 5 	// the allowed "jitter" on reception
+#define DEFAULT_TOLERANCE 10 	// the allowed "jitter" on reception
 #define DEFAULT_MIN_PAUSE 38 	// timeout for packet completion
 #define DEFAULT_SPACE     50 	// pause before sending new packet
+#endif
+
+// in timer ticks (SYSCLK / prescaler = 34.722 us)
+#define DEFAULT_ZERO_TIME 40  	// low pulse 0.6 ms: "0" bit
+#define DEFAULT_ONE_TIME  118 	// low pulse 1.9 ms: "1" bit
+#define DEFAULT_BIT_TIME  194 	// time for a full bit cycle
+
+#define DEFAULT_TOLERANCE 34 	// the allowed "jitter" on reception
+#define DEFAULT_MIN_PAUSE 23 	// timeout for packet completion
+#define DEFAULT_SPACE     110 	// pause before sending new packet
 
 #define MBUS_BUFFER		  32	// buffer size of m-bus packets
 
@@ -105,6 +115,7 @@ typedef struct
 	char rxbits[4]; 	// received bits as chars
 	uint8_t num_bits; 	// # of received bits
 	volatile uint8_t num_bytes;	// # of stored bytes in buffer
+	volatile uint8_t decode;
 } mbus_rx_t; 
 
 
@@ -119,6 +130,7 @@ typedef struct
 		low_1,  // long pulse of a '1' is sent
 		ende,   // end of sequence
 	} state;
+	volatile uint8_t send;
 } mbus_tx_t; 
 
 
