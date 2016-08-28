@@ -31,11 +31,12 @@ uint8_t mbus_tobesend;
 
 char mbus_inbuffer[MBUS_BUFFER];
 
-mbus_data_t packet;
-
+// received state
+mbus_data_t in_packet;
 
 // internal state
-mbus_data_t m_Packet; 	// maintained packet
+mbus_data_t status_packet; 	// maintained packet
+
 command_t 	m_LastCmd; 	// last command from radio
 
 uint8_t		echo_waitstate; 	// set if a response has been sent
@@ -216,7 +217,7 @@ void init_mbus (void)
 	OCR1L = BIT_TIMEOUT; 		// have to complete a bit within this time
 
     // enable capture and compare match interrupt for timer 1
-	TIMSK = (1 << TICIE1) | (1 << OCIE1A);
+	TIMSK |= (1 << TICIE1) | (1 << OCIE1A);
 
 	// set my outputs, all but PB2 are for debugging / error signaling
 	//DDRB =  _BV(PIN_MBUS_OUT | _BV(PIN_TX_OF) | _BV(PIN_RX_OF) | _BV(PIN_RX_UF) | _BV(PIN_DEBUG)); // output and debug pins
@@ -481,7 +482,7 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 
 	if (!mbuspacket->chksumOK) {
 		uart_write((uint8_t *)"?", 1);
-		memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));
+		memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));	// delete content of inbuffer and start over
 		return 0xFF;
 	}
 
@@ -660,25 +661,25 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 
 	memset(&response, 0, sizeof(response));
 
-#if 0
 	/* Ok an dieser Stelle klappt die ACK/Wait Verbindung, alles andere noch nicht hier... */
 
+#if 0
 	// check for echo
 	if (echo_waitstate && inpacket != NULL) {
 
-		//uart_write((uint8_t *)"H", 1);
 
 		// I should have received my own packet string back. If not, there might be a collision?
 		if (strcmp(last_sent, raw_received) == 0) {
 			// OK, we might send the next if desired
 			echo_waitstate = False;
 
+			uart_write((uint8_t *)"H", 1);
 			// evaluate state and send more or maybe spawn timer
 			switch (echostate) {
 
 			case get_state: // this state exists to send the first timestamp right away
-				echostate = (m_Packet.cmd == cPlaying) ? playing : quiet;
-				response = m_Packet;
+				echostate = (status_packet.cmd == cPlaying) ? playing : quiet;
+				response = status_packet;
 				break;
 
 			case playing: // regular timestamps
@@ -688,7 +689,7 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 
 			case resuming:
 				response.cmd = cStatus;
-				response.disk = m_Packet.disk;
+				response.disk = status_packet.disk;
 				response.track = INT2BCD(99);
 				response.minutes = INT2BCD(99);
 				response.seconds = INT2BCD(99);
@@ -698,8 +699,8 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 
 			case changing1: // debug short cut
 				response.cmd = cChanging;
-				response.disk = m_Packet.disk;
-				response.track = m_Packet.track;
+				response.disk = status_packet.disk;
+				response.track = status_packet.track;
 				response.flags = 0x0001; // done
 				echostate = get_state;
 				break;
@@ -719,7 +720,7 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 		
 		} else {	// what to do on collision? try sending again
 			strcpy(buffer, last_sent); // copy old to output
-			return 1; // send again
+			//return 1; // send again
 		}
 
 	}
@@ -734,10 +735,10 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 		switch (echostate) {
 
 		case playing:
-			if (m_Packet.cmd == cPlaying) {
-				m_Packet.track = INT2BCD(BCD2INT(m_Packet.track) + 1); // count
-				if (m_Packet.track > 0x99)
-					m_Packet.track = 0;
+			if (status_packet.cmd == cPlaying) {
+				status_packet.track = INT2BCD(BCD2INT(status_packet.track) + 1); // count
+				if (status_packet.track > 0x99)
+					status_packet.track = 0;
 			}
 			else 
 				hr = 0;
@@ -750,7 +751,7 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 
 		if (hr == 1) {
 			//*sched_timer = 0; // discipline myself: no timer if responding
-			mbus_encode(&m_Packet, buffer);
+			mbus_encode(&status_packet, buffer);
 			strcpy(last_sent, buffer); // remember for echo check
 			echo_waitstate = True;
 		}
@@ -759,7 +760,7 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 	}
 #endif
 
-#if 0
+#if 1
 
 	// sanity checks and debug output
 	if (inpacket != NULL) {
@@ -804,80 +805,80 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 
 #if 1
 	case rPlay:
-		m_Packet.cmd = cPlaying;
-		m_Packet.flags &= ~0x00B;
-		m_Packet.flags |=  0x001;
-		response = m_Packet;
+		status_packet.cmd = cPlaying;
+		status_packet.flags &= ~0x00B;
+		status_packet.flags |=  0x001;
+		response = status_packet;
 		break;
 
 	case rPause:
-		m_Packet.cmd = cPaused;
-		m_Packet.flags &= ~0x00B;
-		m_Packet.flags |=  0x002;
-		response = m_Packet;
+		status_packet.cmd = cPaused;
+		status_packet.flags &= ~0x00B;
+		status_packet.flags |=  0x002;
+		response = status_packet;
 		break;
 
 	case rScnStop:
 	case rStop:
-		m_Packet.cmd = cStopped;
-		m_Packet.flags |=  0x008;
-		response = m_Packet;
+		status_packet.cmd = cStopped;
+		status_packet.flags |=  0x008;
+		response = status_packet;
 		break;
 
 	case rPlayFF:
-		m_Packet.cmd = cForwarding;
-		response = m_Packet;
+		status_packet.cmd = cForwarding;
+		response = status_packet;
 		break;
 
 	case rPlayFR:
-		m_Packet.cmd = cReversing;
-		response = m_Packet;
+		status_packet.cmd = cReversing;
+		response = status_packet;
 		break;
 
 	case rRepeatOff:
-		m_Packet.flags &= ~0xCA0;
-		response = m_Packet;
+		status_packet.flags &= ~0xCA0;
+		response = status_packet;
 		break;
 
 	case rRepeatOne:
-		m_Packet.flags &= ~0xCA0;
-		m_Packet.flags |=  0x400;
-		response = m_Packet;
+		status_packet.flags &= ~0xCA0;
+		status_packet.flags |=  0x400;
+		response = status_packet;
 		break;
 
 	case rRepeatAll:
-		m_Packet.flags &= ~0xCA0;
-		m_Packet.flags |=  0x800;
-		response = m_Packet;
+		status_packet.flags &= ~0xCA0;
+		status_packet.flags |=  0x800;
+		response = status_packet;
 		break;
 
 	case rScan:
-		m_Packet.flags &= ~0xCA0;
-		m_Packet.flags |=  0x080;
-		response = m_Packet;
+		status_packet.flags &= ~0xCA0;
+		status_packet.flags |=  0x080;
+		response = status_packet;
 		break;
 
 	case rMix:
-		m_Packet.flags &= ~0xCA0;
-		m_Packet.flags |=  0x020;
-		response = m_Packet;
+		status_packet.flags &= ~0xCA0;
+		status_packet.flags |=  0x020;
+		response = status_packet;
 		break;
 
 	case rSelect:
 		response.cmd = cChanging;
-		if (inpacket->disk != 0 && inpacket->disk != m_Packet.disk) {
+		if (inpacket->disk != 0 && inpacket->disk != status_packet.disk) {
 			echostate = changing1;
-			response.disk = m_Packet.disk = inpacket->disk;
-			//m_Packet.disk = 9; // test hack!!
-			response.track = m_Packet.track = 0;
+			response.disk = status_packet.disk = inpacket->disk;
+			//status_packet.disk = 9; // test hack!!
+			response.track = status_packet.track = 0;
 			response.flags = 0x1001; // busy
 		} else {
 			// zero indicates same disk
 			echostate = get_state;
-			m_Packet.minutes = 0;
-			m_Packet.seconds = 0;
-			response.disk = m_Packet.disk;
-			response.track = m_Packet.track = inpacket->track;
+			status_packet.minutes = 0;
+			status_packet.seconds = 0;
+			response.disk = status_packet.disk;
+			response.track = status_packet.track = inpacket->track;
 			response.flags = 0x0001; // done
 		}
 		break;
@@ -887,10 +888,10 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 
 	case rResumeP:
 		echostate = resuming;
-		m_Packet.cmd = (inpacket->cmd == rResume) ? cPlaying : cPaused;
+		status_packet.cmd = (inpacket->cmd == rResume) ? cPlaying : cPaused;
 		response.cmd = rStop;
-		response.disk = m_Packet.disk;
-		response.track = m_Packet.track;
+		response.disk = status_packet.disk;
+		response.track = status_packet.track;
 		response.flags = 0x0001; // done
 		break;
 	

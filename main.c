@@ -57,7 +57,7 @@ static void init (void) {
 	PORTG = 0; DDRG = 0;
 
 	//wdt_enable(WDTO_1S);
-	wdt_disable();		  // Watchdog off!
+	wdt_disable();		      // Watchdog off!
 	timer_2_init();		      // Activate timer 2 for interrupt
 
 	/* Is this a power on reset? */
@@ -103,47 +103,45 @@ int main (void) {
     sei();
 
 
+    static uint16_t player_sec = 0;
+    static uint8_t  player_disk = 0;
+    static uint8_t  player_track = 0;
+    static uint8_t  player_index = 0;
     
     for (;;) {
 
+        /* Perform some player timings and simulations */
+        static uint32_t player_ticks = 0;
 
-        //uint8_t new_uart = uart_searchbuffer('\r');
+        if (timer_ms_passed(&player_ticks, 1000)) {
 
+            player_sec++;
+
+            if (player_sec == 5400)
+                player_sec = 0;
+        }
+
+
+        /* check if there is a command to be decoded */
         if (rx_packet.decode) {
 
-            mbus_decode(&packet, mbus_inbuffer);
+            mbus_decode(&in_packet, mbus_inbuffer);
 
-            mbus_process(mbus_inbuffer, &packet, mbus_outbuffer);
-        
+            mbus_process(mbus_inbuffer, &in_packet, mbus_outbuffer);
+
             rx_packet.decode = False;
 
-            display_clear();
-
-            display_printf("%s", packet.description);
+            display_cursor(1, 1);
+            display_printf("                    ");
+            display_cursor(1, 1);
+            display_printf("%s", in_packet.description);
         }
-        
+
+        display_cursor(4, 1);
+        display_printf("D:%d T:%0d %0d:%02d", player_disk, player_track, player_sec / 60, player_sec % 60);
 
 
 
-
-
-#if 0
-        /* Decode received packet */
-        if (rx_packet.decode){
-
-            mbus_decode(&packet, mbus_inbuffer);
-
-            memset(&mbus_outbuffer, '\0', sizeof(mbus_outbuffer));
-
-            mbus_process(mbus_inbuffer, &packet, mbus_outbuffer);
-
-            memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));
-
-            //rx_packet.decode = False;
-            tx_packet.send = True;
-            //memset(&mbus_inbuffer, 0, sizeof(mbus_inbuffer));
-        }
-#endif
 
 
 

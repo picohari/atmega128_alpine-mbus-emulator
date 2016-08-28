@@ -213,7 +213,7 @@ typedef struct {
 extern mbus_rx_t 	rx_packet;
 extern mbus_tx_t 	tx_packet;
 
-extern mbus_data_t packet;
+extern mbus_data_t in_packet;
 
 extern char mbus_outbuffer[MBUS_BUFFER];
 
