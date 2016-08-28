@@ -107,10 +107,27 @@ int main (void) {
     for (;;) {
 
 
-        uint8_t new_uart = uart_searchbuffer('\r');
-        //new_mbus = mbus_searchbuffer('\r');
+        //uint8_t new_uart = uart_searchbuffer('\r');
 
-#if 1
+        if (rx_packet.decode) {
+
+            mbus_decode(&packet, mbus_inbuffer);
+
+            mbus_process(mbus_inbuffer, &packet, mbus_outbuffer);
+        
+            rx_packet.decode = False;
+
+            display_clear();
+
+            display_printf("%s", packet.description);
+        }
+        
+
+
+
+
+
+#if 0
         /* Decode received packet */
         if (rx_packet.decode){
 
@@ -133,7 +150,7 @@ int main (void) {
         /* check if there is a command to be sent */
         if (!(TIMSK & _BV(TOIE0))                       // not already sending
             && rx_packet.state == wait                  // not receiving
-            && ( new_uart || tx_packet.send )                 // newline in receive buffers
+            && ( /*new_uart ||*/ tx_packet.send )           // newline in receive buffers
             ) {
 
 
@@ -143,7 +160,7 @@ int main (void) {
             TCNT0 = 0;                              // reset timer because ISR only offsets to it
             TIMSK |= _BV(TOIE0);                    // start the output handler with timer0
 
-            //tx_packet.send = False;
+            tx_packet.send = False;
         }
 
 

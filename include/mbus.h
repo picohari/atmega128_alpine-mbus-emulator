@@ -48,13 +48,13 @@
 #endif
 
 // in timer ticks (SYSCLK / prescaler = 34.722 us)
-#define DEFAULT_ZERO_TIME 40  	// low pulse 0.6 ms: "0" bit
-#define DEFAULT_ONE_TIME  118 	// low pulse 1.9 ms: "1" bit
-#define DEFAULT_BIT_TIME  194 	// time for a full bit cycle
+#define DEFAULT_ZERO_TIME 38  	// low pulse 0.6 ms: "0" bit
+#define DEFAULT_ONE_TIME  116 	// low pulse 1.9 ms: "1" bit
+#define DEFAULT_BIT_TIME  192 	// time for a full bit cycle
 
 #define DEFAULT_TOLERANCE 34 	// the allowed "jitter" on reception
-#define DEFAULT_MIN_PAUSE 23 	// timeout for packet completion
-#define DEFAULT_SPACE     110 	// pause before sending new packet
+#define DEFAULT_MIN_PAUSE 15 	// timeout for packet completion
+#define DEFAULT_SPACE     55 	// pause before sending new packet
 
 #define MBUS_BUFFER		  32	// buffer size of m-bus packets
 
@@ -114,7 +114,7 @@ typedef struct
 	} state;
 	char rxbits[4]; 	// received bits as chars
 	uint8_t num_bits; 	// # of received bits
-	volatile uint8_t num_bytes;	// # of stored bytes in buffer
+	volatile uint8_t num_nibbles;	// # of stored nibbles in buffer
 	volatile uint8_t decode;
 } mbus_rx_t; 
 
@@ -162,6 +162,7 @@ typedef enum {
 	rScan,
 	rMix,
 	rSelect,
+	rStatus,
 	// changer to radio
 	cPingOK,
 	cAck,
@@ -215,10 +216,9 @@ extern mbus_tx_t 	tx_packet;
 extern mbus_data_t packet;
 
 extern char mbus_outbuffer[MBUS_BUFFER];
-extern fifo_t mbus_outfifo;
 
 extern char mbus_inbuffer[MBUS_BUFFER];
-extern fifo_t mbus_infifo;
+
 
 
 

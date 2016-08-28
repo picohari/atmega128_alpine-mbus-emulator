@@ -25,19 +25,19 @@
 mbus_rx_t rx_packet;
 mbus_tx_t tx_packet;
 
-
 char mbus_outbuffer[MBUS_BUFFER];
-//uint8_t mbus_bytes;
+
 uint8_t mbus_tobesend;
 
 char mbus_inbuffer[MBUS_BUFFER];
-//fifo_t mbus_infifo;
 
 mbus_data_t packet;
+
 
 // internal state
 mbus_data_t m_Packet; 	// maintained packet
 command_t 	m_LastCmd; 	// last command from radio
+
 uint8_t		echo_waitstate; 	// set if a response has been sent
 char 		last_sent[100]; 	// our last sent packet, for echo check
 
@@ -67,6 +67,7 @@ static const code_item_t alpine_codetable[] =
 	{ rPing, 		"18", 				"Ping" },
 	{ cPingOK, 		"98", 				"Ping OK" },
 	{ cAck, 		"9F0000f", 			"Ack/Wait" }, 		// f0=0|1|6|7|9
+	{ rStatus, 		"19",				"some info?" },
 	{ cPreparing,  	"991ttiimmssff0f", 	"Preparing" }, 		// f0=0:normal, f0=4:repeat one, f0=8:repeat all
 	{ cStopped,    	"992ttiimmssff0f", 	"Stopped" }, 		// f1=0:normal, f1=2:mix, f1=8:scan
 	{ cPaused,     	"993ttiimmssff0f", 	"Paused" }, 		// f3=1: play mode, f3=2:paused mode, f3=8: stopped
@@ -82,8 +83,8 @@ static const code_item_t alpine_codetable[] =
 	{ rPlayFR,  	"11109", 			"Play FR start" },
 	{ rPauseFF, 	"11106", 			"Pause FF start" },
 	{ rPauseFR, 	"1110A", 			"Pause FR start" },
-	{ rResume,  	"11181", 			"Play from current pos." },
-	{ rResumeP, 	"11182", 			"Pause from current pos." },
+	{ rResume,  	"11181", 			"Play fr curr. pos." },
+	{ rResumeP, 	"11182", 			"Pause fr curr. pos." },
 //	{ rNextMix, 	"1130A314", 		"next random" },
 //	{ rPrevMix, 	"1130B314", 		"previous random" },
 	{ rSelect,  	"113dttff", 		"Select" }, // f0=1:playing, f0=2:paused, f1=4:random
@@ -221,17 +222,14 @@ void init_mbus (void)
 	//DDRB =  _BV(PIN_MBUS_OUT | _BV(PIN_TX_OF) | _BV(PIN_RX_OF) | _BV(PIN_RX_UF) | _BV(PIN_DEBUG)); // output and debug pins
 	DDR_MBUS_OUT |= (1 << PIN_MBUS_OUT);
 
-
 	DDR_DEBUG  |=  (1 << PIN_DEBUG);
 	PORT_DEBUG &= ~(1 << PIN_DEBUG); 
 	//TCCR1A = _BV(COM1A0); // test: toggle OC1 at compare match
 
 	/* FIFOs für Ein- und Ausgabe initialisieren */ 
-    memset(&mbus_inbuffer, 0, sizeof(mbus_inbuffer));
-    //fifo_init(&mbus_infifo, mbus_inbuffer, MBUS_BUFFER);
-    //fifo_init(&mbus_outfifo, mbus_outbuffer, MBUS_BUFFER);
+    memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));
     
-    rx_packet.num_bytes = 0;
+    rx_packet.num_nibbles = 0;
 }
 
 
@@ -245,12 +243,13 @@ ISR(TIMER1_CAPT_vect)
 {	
 	char outchar = 0;
 
-	PORT_DEBUG |= _BV(PIN_DEBUG); 	// debug, indicate loop
+	//PORT_DEBUG |= _BV(PIN_DEBUG); 	// debug, indicate loop
 	
 	switch (rx_packet.state) {
 
 	case wait: 						// a packet is starting
 		rx_packet.num_bits = 0;
+		//TIMSK |= (1 << OCIE1A);		// Enable overflow/compare 
 		// no break, fall through
 
 	case low: // high phase between bits has ended, start of low pulse
@@ -307,15 +306,16 @@ ISR(TIMER1_CAPT_vect)
 					uHexDigit = 0xFF; // mark error
 			}
 
-			/* Store received data into UART fifo as HEX-DIGIT 0..9-A..F and send it out */
+			/* HEX-DIGIT 0..9-A..F and send it out */
 			uint8_t value = int2hex(uHexDigit);
+			
+			/* Send via UART */
 			uint8_t *res_ptr = &value;
-			
-			uart_write(res_ptr, 1); // sending here gives hex
-			
+			uart_write(res_ptr, 1);
+
 			/* Store received data into DECODER buffer */
-			mbus_inbuffer[rx_packet.num_bytes] = value;
-			rx_packet.num_bytes++;
+			mbus_inbuffer[rx_packet.num_nibbles] = value;
+			rx_packet.num_nibbles++;
 
 		}
 
@@ -327,11 +327,11 @@ ISR(TIMER1_CAPT_vect)
 ISR(TIMER1_COMPA_vect)
 {
 
-	//PORT_DEBUG |= _BV(PIN_DEBUG); 	// debug, indicate loop
-	
 	if (rx_packet.state == wait)
 		return; // timeouts don't matter
 
+	//PORT_DEBUG |= _BV(PIN_DEBUG); 	// debug, indicate loop
+	
 	rx_packet.state = wait; 	// start looking for a new packet
 	//TCCR1B &= ~_BV(ICES1); 	// capture on falling edge
 	TCCR1B |= (1 << ICES1); 	// capture on rising edge
@@ -341,31 +341,22 @@ ISR(TIMER1_COMPA_vect)
 	if ((rx_packet.num_bits % 4) != 0) 			// there should be no data waiting for output
 		uart_write((uint8_t *)('X'), 1); 		// but if, then mark it
 
-	// 
-	if (rx_packet.num_bytes > 2 && rx_packet.num_bits % 4 == 0) {
+#if 1
+	if (rx_packet.num_nibbles > 2 && rx_packet.num_bits % 4 == 0) {
 
-		mbus_inbuffer[rx_packet.num_bytes] = '\r';		// insert final newline char
+		mbus_inbuffer[rx_packet.num_nibbles] = '\r';		// insert final newline char
 
-		uart_write((uint8_t *)LINE_FEED, strlen(LINE_FEED));
+		//uart_write((uint8_t *)LINE_FEED, strlen(LINE_FEED));
+		uart_write((uint8_t *)"|", 1);
 
-		display_cursor(1, 1);
-		//display_clear();
+		rx_packet.num_nibbles = 0;
 
-		rx_packet.num_bytes = 0;
 		rx_packet.decode = True;
 
-		PORT_DEBUG &= ~_BV(PIN_DEBUG); // debug, indicate loop
-
-		//rx_packet.num_bytes++;							
-		//LOG_DEBUG("%d", rx_packet.num_bytes);
-		//uart_write((uint16_t *)rx_packet.num_bytes, 1);
-		//display_printf("%d", rx_packet.num_bytes);
 	}
-	
-	//rx_packet.num_bytes = 0;
-	//_inline_fifo_put(&mbus_infifo, '\r');
-	//uart_write((uint8_t *)rx_packet.num_bytes, 1);
-	
+#endif
+
+	//PORT_DEBUG &= ~_BV(PIN_DEBUG); // debug, indicate loop
 
 }
 
@@ -379,8 +370,7 @@ ISR(TIMER0_OVF_vect)
 	{
 	case start: // start of a bit, or maybe the packet
 
-		// disable capture and compare match interrupt for timer 1
-		//TIMSK &= ~( (1 << TICIE1) | (1 << OCIE1A) );
+		PORT_DEBUG |= _BV(PIN_DEBUG); 	// debug, indicate loop
 
 		if (tx_packet.num_bits % 4 == 0) {		// need a new hex nibble
 
@@ -388,20 +378,20 @@ ISR(TIMER0_OVF_vect)
 
 			do {	// end with '\r', skip all other control codes (e.g. '\n') and non-hex chars
 
-				//PORT_DEBUG |= _BV(PIN_DEBUG); // debug, indicate loop
-
-				// TODO: Insert BYTE to be sent here
-				// fifo_get_data(&infifo, &fetched, 1);
-
 				/*
-				An dieser Stelle müssen die Bytes aus dem Array mbus_outbuffer[] EINZELN geholt werden, damit sie gesendet werden können.
+				An dieser Stelle müssen die Bytes aus dem Array mbus_outbuffer[]
+				EINZELN geholt werden, damit sie gesendet werden können.
 				*/
 				
 				/* ENCODER */
-				fetched = mbus_outbuffer[mbus_tobesend++];
+				fetched = mbus_outbuffer[mbus_tobesend++];	// Version for EMULATOR input
 
 				/* UART */
 				//fetched = fifo_get_nowait(&infifo);		// Version for UART input
+
+				/* SEND also via UART */
+				//uint8_t *res_ptr = &fetched;
+				//uart_write(res_ptr, 1);
 
 				tx_packet.cur_nibble = hex2int(fetched);
 
@@ -414,8 +404,9 @@ ISR(TIMER0_OVF_vect)
 				tx_packet.state = ende;
 				break; // exit
 			}
+
 		}
-		PORT_MBUS_OUT |= _BV(PIN_MBUS_OUT); // pull the line low
+		PORT_MBUS_OUT |= _BV(PIN_MBUS_OUT); // pull the M-BUS line low (active high bcse of transistor pulling down)
 
 		if (tx_packet.cur_nibble & (1 << (3 - (tx_packet.num_bits % 4)))) {
 		 	// 1
@@ -447,9 +438,10 @@ ISR(TIMER0_OVF_vect)
 		TCNT0 = -1; 				// next interrupt will be pending immediately, but is masked
 		tx_packet.state = start;
 		tx_packet.num_bits = 0; 	// reset the bit counter again
+		
+		mbus_tobesend =  0;
 
-		// enable capture and compare match interrupt for timer 1
-		//TIMSK |= (1 << TICIE1) | (1 << OCIE1A) ;
+		PORT_DEBUG &= ~_BV(PIN_DEBUG); // debug, indicate loop
 
 		break;
 	}
@@ -487,10 +479,11 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 	mbuspacket->chksum = calc_checksum(packet_src, len);
 	mbuspacket->chksumOK = (mbuspacket->chksum == hex2int(packet_src[len])); // verify checksum
 
-
-	//display_printf("%d", len);
-	//display_printf("%d", mbuspacket->chksumOK);
-
+	if (!mbuspacket->chksumOK) {
+		uart_write((uint8_t *)"?", 1);
+		memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));
+		return 0xFF;
+	}
 
 	for (i = 0; i < sizeof(alpine_codetable) / sizeof(*alpine_codetable); i++) {
 		// try all commands
@@ -549,15 +542,20 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 			mbuspacket->cmd = alpine_codetable[i].cmd;
 			mbuspacket->description = alpine_codetable[i].infotext;
 
+			if (mbuspacket->chksumOK) {
 
-			display_printf("%s", mbuspacket->description);
-			uart_write((uint8_t *)"R", 1);	// Radio sent this message
+				if (mbuspacket->source == eRadio)
+					uart_write((uint8_t *)"R", 1);
+				else if (mbuspacket->source == eCD)
+					uart_write((uint8_t *)"W", 1);
 
+				uart_write((uint8_t *)LINE_FEED, strlen(LINE_FEED));
+				memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));
+			}
+			
 			break; // exit the command loop
 		}
 	}
-
-	rx_packet.decode = False;	// do not decode again in next loop
 
 	return (mbuspacket->cmd == eInvalid) ? 0xFF : 0;
 
@@ -585,11 +583,9 @@ uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest)
 		return 0xFF; 			// not found
 	}
 
-
 	const char *pkt_template = alpine_codetable[i].hexmask;
 	char *pkt_writeout = packet_dest;
 	len = strlen(pkt_template);
-
 
 	for (j = len - 1; j >= 0; j--) { // reverse order works better for multi-digit numbers
 
@@ -631,15 +627,13 @@ uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest)
 		}
 	}
 
+
 	int8_t checksum = calc_checksum(pkt_writeout, len);
 	pkt_writeout[len] = int2hex(checksum); 	// add checksum
 	pkt_writeout[len+1] = '\r'; 			// string termination
 	pkt_writeout[len+2] = '\0'; 			// string termination
 
-	mbus_tobesend = 0;
-
-	uart_write((uint8_t *)"S", 1);
-	//memset(&mbus_inbuffer, 0, sizeof(mbus_inbuffer));
+	tx_packet.send = True;
 
 	return hr;
 }
@@ -729,9 +723,11 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 		}
 
 	}
-	
-	
-	if (inpacket == NULL) {	// response from timer, not by reception (could be a seperate function in future)
+#endif 
+
+
+#if 0	
+	if (inpacket == NULL ) {	// response from timer, not by reception (could be a seperate function in future)
 
 		//uart_write((uint8_t *)"N", 1);
 
@@ -761,25 +757,52 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 		
 		return hr;
 	}
-
-	// check if intact and for us
-	if (inpacket != NULL && (!inpacket->chksumOK || inpacket->source != eRadio)) {	// broken packet
-
-		uart_write((uint8_t *)"#", 1);
-
-		return 0; // ignore for now
-	}
 #endif
+
+#if 0
+
+	// sanity checks and debug output
+	if (inpacket != NULL) {
+
+		if (!inpacket->chksumOK) {
+			//uart_write((uint8_t *)"c", 1);	// checksum error
+			return 0;
+		}
+	
+
+		if (inpacket->source != eRadio) {
+			//uart_write((uint8_t *)"s", 1);	// destination error
+			return 0; // ignore for now
+		}
+
+	}
+
+#endif
+
 	
 	// generate immediate response to radio command, want to see no timer spawn here
-	m_LastCmd = inpacket->cmd;
+
+
+	//if (inpacket->cmd != m_LastCmd) {	// we have received a new command
+	//	m_LastCmd = inpacket->cmd;
+	//}
 
 	switch(inpacket->cmd) {
 
 	case rPing:
 		response.cmd = cPingOK;
 		break;
-		
+
+	case rStatus:
+		response.cmd = cAck;
+
+		break;
+
+	case rResume:
+		response.cmd = cAck;
+		break;
+
+#if 1
 	case rPlay:
 		m_Packet.cmd = cPlaying;
 		m_Packet.flags &= ~0x00B;
@@ -859,29 +882,39 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 		}
 		break;
 
-	case rResume:
+
+
+
 	case rResumeP:
 		echostate = resuming;
 		m_Packet.cmd = (inpacket->cmd == rResume) ? cPlaying : cPaused;
-		response.cmd = cChanging;
+		response.cmd = rStop;
 		response.disk = m_Packet.disk;
 		response.track = m_Packet.track;
 		response.flags = 0x0001; // done
 		break;
 	
+
+
+#endif
+
 	default:
-		response.cmd = cAck;
+		//response.cmd = cAck;
+		response.cmd = eInvalid;
+		//response.cmd = cPingOK;
 
 	} // switch(inpacket->cmd)
 	
 	
-	if (hr == 1) {
+	if (response.cmd != eInvalid) {
 		//*sched_timer = 0; // discipline myself: no timer if responding
 		mbus_encode(&response, buffer);
 		strcpy(last_sent, buffer); // remember for echo check
 		echo_waitstate = True;
+
+		return 1;
 	}
 
 
-	return hr;
+	return 0;
 }
