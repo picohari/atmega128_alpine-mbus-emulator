@@ -1,19 +1,3 @@
-/*
- * NVT-Control 
- *
- * Copyright (C) 2008  H9-Laboratory Ltd.
- * All rights reserved
- * 
- * CREATED			:	18.10.2008
- * VERSION			: 	1.0
- * TARGET DEVICE	: 	ATMEL ATmega128
- * 
- * COMMENT			:	This is the main control application for
- *						the Night-Vision-Terrain light controller.
- *
- */
- 
- 
  /*! 
  * @file 	log.h
  * @brief 	Routinen zum Loggen von Informationen. Es sollten ausschliesslich nur

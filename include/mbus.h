@@ -1,28 +1,64 @@
+/****************************************************************************
+ * Copyright (C) 2016 by Harald W. Leschner (DK6YF)                         *
+ *                                                                          *
+ * This file is part of ALPINE M-BUS Interface Control Emulator             *
+ *                                                                          *
+ * This program is free software you can redistribute it and/or modify		*
+ * it under the terms of the GNU General Public License as published by 	*
+ * the Free Software Foundation either version 2 of the License, or 		*
+ * (at your option) any later version. 										*
+ *  																		*
+ * This program is distributed in the hope that it will be useful, 			*
+ * but WITHOUT ANY WARRANTY without even the implied warranty of 			*
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 			*
+ * GNU General Public License for more details. 							*
+ *  																		*
+ * You should have received a copy of the GNU General Public License 		*
+ * along with this program if not, write to the Free Software 				*
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA*
+ ****************************************************************************/
+
+/**
+ * @file mbus.h
+ *
+ * @author Harald W. Leschner (DK6YF)
+ * @date 23.08.2016
+ *
+ * @brief File containing example of doxygen usage for quick reference.
+ *
+ * Here typically goes a more extensive explanation of what the header
+ * defines. Doxygens tags are words preceeded by either a backslash @\
+ * or by an at symbol @@.
+ *
+ * @see http://www.stack.nl/~dimitri/doxygen/docblocks.html
+ * @see http://www.stack.nl/~dimitri/doxygen/commands.html
+ */
+
+
+
+
 #ifndef _MBUS_H_
 #define _MBUS_H_
 
 
-#include "fifo.h"
-
-
 // a place for platform dependent indirect definitions
-#if defined(__AVR_AT90S2313__) // the only one used so far
-#define PIN_MBUS_OUT PB2 // MBus output pin (active = pull low)
-#define PIN_TX_OF    PB6 // TX overflow error, send buffer full
-#define PIN_RX_OF    PB5 // RX overflow error, receive buffer full
-#define PIN_RX_UF    PB4 // RX underflow error, no char available
-#define PIN_DEBUG    PB7 // debug condition
+#if defined(__AVR_AT90S2313__) 	// the only one used so far
+#define PIN_MBUS_OUT PB2 		// MBus output pin (active = pull low)
+#define PIN_TX_OF    PB6 		// TX overflow error, send buffer full
+#define PIN_RX_OF    PB5 		// RX overflow error, receive buffer full
+#define PIN_RX_UF    PB4 		// RX underflow error, no char available
+#define PIN_DEBUG    PB7 		// debug condition
 
-#elif defined(__AVR_ATmega128__) // trying the Mega8 now
-#define PIN_MBUS_OUT  PD5   // MBus output pin (active = pull low)
-#define PORT_MBUS_OUT PORTD // MBus output pin (active = pull low)
-#define DDR_MBUS_OUT  DDRD // MBus output pin (active = pull low)
-//#define PIN_TX_OF    PB1 // Really strange: PIN_MBUS_OUT becomes weak
-//#define PIN_RX_OF    PB1 //  if any other b-port pin than 3 used for it,
-//#define PIN_RX_UF    PB0 //  or any other than 1 is used additionally.
-#define PIN_DEBUG    PC0 	//  So I map all error pins to 1.
-#define PORT_DEBUG   PORTC  //  So I map all error pins to 1.
-#define DDR_DEBUG    DDRC  //  So I map all error pins to 1.
+#elif defined(__AVR_ATmega128__) 	// trying the Mega8 now
+#define PIN_MBUS_OUT  PD5   		// MBus output pin (active = pull low)
+#define PORT_MBUS_OUT PORTD 		// MBus output pin (active = pull low)
+#define DDR_MBUS_OUT  DDRD 			// MBus output pin (active = pull low)
+//#define PIN_TX_OF    PB1 			// Really strange: PIN_MBUS_OUT becomes weak
+//#define PIN_RX_OF    PB1 			//  if any other b-port pin than 3 used for it,
+//#define PIN_RX_UF    PB0 			//  or any other than 1 is used additionally.
+#define PIN_DEBUG    PC0 			//  So I map all error pins to 1.
+#define PORT_DEBUG   PORTC  		//  So I map all error pins to 1.
+#define DDR_DEBUG    DDRC  			//  So I map all error pins to 1.
 
 #define CTC1 	WGM12
 #define OCR1H 	OCR1AH
@@ -214,20 +250,23 @@ extern mbus_rx_t 	rx_packet;
 extern mbus_tx_t 	tx_packet;
 
 extern mbus_data_t in_packet;
+extern mbus_data_t status_packet;
 
 extern char mbus_outbuffer[MBUS_BUFFER];
 
 extern char mbus_inbuffer[MBUS_BUFFER];
 
 
+extern volatile uint16_t player_sec;
+
 
 
 // prototypes
-void init_mbus (void); // helper function for main(): setup timers and pins
-void init_eeprom (void); // a convenience feature to populate the timings in eeprom with reasonable defaults
+void init_mbus (void); 		// helper function for main(): setup timers and pins
+void init_eeprom (void); 	// a convenience feature to populate the timings in eeprom with reasonable defaults
 
-char int2hex(uint8_t n); // utility function: convert a number to a hex char
-uint8_t hex2int(char c); // utility function: convert a hex char to a number
+char int2hex(uint8_t n); 	// utility function: convert a number to a hex char
+uint8_t hex2int(char c); 	// utility function: convert a hex char to a number
 int8_t calc_checksum(char *buffer, uint8_t len);
 uint8_t mbus_searchbuffer(uint8_t key);
 
@@ -235,15 +274,7 @@ uint8_t mbus_searchbuffer(uint8_t key);
 uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest);
 uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src);
 
-uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char *buffer /*, uint16_t *sched_timer*/ ); 			
-
-
-// interrupt handlers
-//SIGNAL(SIG_OVERFLOW0); // timer 0 overflow, used for sending
-//SIGNAL(SIG_INPUT_CAPTURE1); // edge detection interrupt, the heart of receiving
-//SIGNAL(SIG_OUTPUT_COMPARE1A); // timeout interrupt, this terminates a received packet
-
-
+uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall); 			
 
 
 

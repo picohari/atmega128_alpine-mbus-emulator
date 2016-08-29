@@ -1,11 +1,41 @@
-///////////////////////////////////////////////////////////////////
-// Alpine M-Bus interface to RS232
-// (c) 2003 Joerg Hohensohn, allowed for non-commercial use only
-//                           (feedback appreciated)
-//
-// This translates the M-Bus to RS232 and back (listen and send)
-// For more info see http://joerg.hohensohn.bei.t-online.de/mbus
-///////////////////////////////////////////////////////////////////
+/****************************************************************************
+ * Copyright (C) 2016 by Harald W. Leschner (DK6YF)                         *
+ *                                                                          *
+ * This file is part of ALPINE M-BUS Interface Control Emulator             *
+ *                                                                          *
+ * This program is free software you can redistribute it and/or modify		*
+ * it under the terms of the GNU General Public License as published by 	*
+ * the Free Software Foundation either version 2 of the License, or 		*
+ * (at your option) any later version. 										*
+ *  																		*
+ * This program is distributed in the hope that it will be useful, 			*
+ * but WITHOUT ANY WARRANTY without even the implied warranty of 			*
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 			*
+ * GNU General Public License for more details. 							*
+ *  																		*
+ * You should have received a copy of the GNU General Public License 		*
+ * along with this program if not, write to the Free Software 				*
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA*
+ ****************************************************************************/
+
+/**
+ * @file mbus.c
+ *
+ * @author Harald W. Leschner (DK6YF)
+ * @date 23.08.2016
+ *
+ * @brief File containing example of doxygen usage for quick reference.
+ *
+ * Here typically goes a more extensive explanation of what the header
+ * defines. Doxygens tags are words preceeded by either a backslash @\
+ * or by an at symbol @@.
+ *
+ * @see http://www.stack.nl/~dimitri/doxygen/docblocks.html
+ * @see http://www.stack.nl/~dimitri/doxygen/commands.html
+ */
+
+
+
 
 #include <inttypes.h>      	// common scalar types
 #include <avr/io.h>        	// for device register definitions
@@ -39,8 +69,8 @@ mbus_data_t status_packet; 	// maintained packet
 
 command_t 	m_LastCmd; 	// last command from radio
 
-uint8_t		echo_waitstate; 	// set if a response has been sent
-char 		last_sent[100]; 	// our last sent packet, for echo check
+//uint8_t		echo_waitstate; 	// set if a response has been sent
+//char 		last_sent[100]; 	// our last sent packet, for echo check
 
 
 enum
@@ -96,18 +126,20 @@ static const code_item_t alpine_codetable[] =
 	{ rMix,       	"11402000", 		"Mix" },
 	{ cPwrUp, 		"9A0000000000", 	"some powerup?" },
 	{ cLastInfo,  	"9B0dttfff0f", 		"last played" }, // f0=0:done, f0=1:busy, f0=8:eject, //f1=4: repeat1, f1=8:repeat all, f2=2:mix
-	{ cChanging4, 	"9B8d00fff0f", 		"Changing Phase 4" },
 	{ cChanging,  	"9B9dttfff0f", 		"Changing" }, 
+	{ cChanging4, 	"9B8d00fff0f", 		"Changing Phase 4" },
 	{ cNoMagzn,   	"9BAd00f00ff", 		"No Magazin" },
+	{ cChanging1, 	"9BDd00fff0f", 		"Changing Phase 1" },
 	{ cChanging2, 	"9BBd00fff0f", 		"Changing Phase 2" },
 	{ cChanging3, 	"9BCd00fff0f", 		"Changing Phase 3" },
-	{ cChanging1, 	"9BDd00fff0f", 		"Changing Phase 1" },
 	{ cStatus, 		"9Cd01ttmmssf", 	"Disk Status" },
 	{ cStat1, 		"9D000fffff", 		"some status?" },
 	{ cStat2, 		"9E0000000", 		"some more status?" },
 	// also seen:
 	// 11191
 };
+
+volatile uint16_t player_sec = 0;
 
 
 // a convenience feature to populate the timings in eeprom with reasonable defaults
@@ -231,6 +263,23 @@ void init_mbus (void)
     memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));
     
     rx_packet.num_nibbles = 0;
+
+    /* Changer simulator setup */
+    echostate = quiet;
+
+	status_packet.source = eCD;
+	status_packet.chksum = -1;
+	status_packet.chksumOK = False;
+	status_packet.cmd = eInvalid;
+	status_packet.description = "";
+	status_packet.flagdigits = 0;
+	status_packet.validcontent = 0;
+	status_packet.disk = 1;
+	status_packet.track = 1;
+	status_packet.index = 0;
+	status_packet.minutes = 0;
+	status_packet.seconds = 0;
+	status_packet.flags = 0;
 }
 
 
@@ -441,7 +490,7 @@ ISR(TIMER0_OVF_vect)
 		tx_packet.num_bits = 0; 	// reset the bit counter again
 		
 		mbus_tobesend =  0;
-
+		//memset(&mbus_outbuffer, '\0', sizeof(mbus_outbuffer));	// delete content of inbuffer and start over
 		PORT_DEBUG &= ~_BV(PIN_DEBUG); // debug, indicate loop
 
 		break;
@@ -643,9 +692,6 @@ uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest)
 
 
 
-
-
-
 // returns S_OK if an answer is desired (then no timer should be spawned)
 // or S_FALSE if not replying, in which case a timer may be spawned
 
@@ -654,7 +700,7 @@ uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest)
 // destination for the answer packet string
 // set to milliseconds units in wished to be called again
 
-uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char *buffer /*, uint16_t *sched_timer*/ ) 			
+uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall) 			
 {
 	uint8_t hr = 1; 		// default is do reply
 	mbus_data_t response;
@@ -662,6 +708,65 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 	memset(&response, 0, sizeof(response));
 
 	/* Ok an dieser Stelle klappt die ACK/Wait Verbindung, alles andere noch nicht hier... */
+
+
+	if (timercall) {
+		// evaluate state and send more or maybe spawn timer
+		switch (echostate) {
+
+		case get_state: // this state exists to send the first timestamp right away
+			echostate = (status_packet.cmd == cPlaying) ? playing : quiet;
+			response = status_packet;
+			break;
+			
+		case playing:
+			response = status_packet;
+			if (status_packet.cmd == cPlaying) {
+				response.minutes = INT2BCD(status_packet.minutes);
+				response.seconds = INT2BCD(status_packet.seconds);
+				mbus_encode(&response, buffer);
+				return 1;
+				//status_packet.track = INT2BCD(BCD2INT(status_packet.track) + 1); // count
+				//if (status_packet.track > 0x99)
+				//	status_packet.track = 0;
+			}
+#if 0
+			else if (status_packet.cmd == cPaused) {
+				response.minutes = INT2BCD(player_sec / 60);
+				response.seconds = INT2BCD(player_sec % 60);
+				mbus_encode(&response, buffer);
+				return 1;
+			}
+			
+			else
+				hr = 0;
+#endif
+			break;
+
+
+		case resuming:
+			response.cmd = cStatus;
+			response.disk = status_packet.disk;
+			response.track = INT2BCD(99);
+			response.minutes = INT2BCD(99);
+			response.seconds = INT2BCD(99);
+			response.flags = 0xF;
+			echostate = get_state;
+			break;
+
+		case changing1: // debug short cut
+			response.cmd = cChanging;
+			response.disk = status_packet.disk;
+			response.track = status_packet.track;
+			response.flags = 0x0001; // done
+			echostate = get_state;
+			break;
+
+		default:
+			hr = 0; // send nothing
+
+		}
+	}
 
 #if 0
 	// check for echo
@@ -674,41 +779,7 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 			echo_waitstate = False;
 
 			uart_write((uint8_t *)"H", 1);
-			// evaluate state and send more or maybe spawn timer
-			switch (echostate) {
 
-			case get_state: // this state exists to send the first timestamp right away
-				echostate = (status_packet.cmd == cPlaying) ? playing : quiet;
-				response = status_packet;
-				break;
-
-			case playing: // regular timestamps
-				//*sched_timer = 1000;
-				hr= 0;
-				break;
-
-			case resuming:
-				response.cmd = cStatus;
-				response.disk = status_packet.disk;
-				response.track = INT2BCD(99);
-				response.minutes = INT2BCD(99);
-				response.seconds = INT2BCD(99);
-				response.flags = 0xF;
-				echostate = get_state;
-				break;
-
-			case changing1: // debug short cut
-				response.cmd = cChanging;
-				response.disk = status_packet.disk;
-				response.track = status_packet.track;
-				response.flags = 0x0001; // done
-				echostate = get_state;
-				break;
-
-			default:
-				hr = 0; // send nothing
-
-			}
 
 			if (hr == 1) {
 				//*sched_timer = 0; // discipline myself: no timer if responding
@@ -784,10 +855,6 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 	// generate immediate response to radio command, want to see no timer spawn here
 
 
-	//if (inpacket->cmd != m_LastCmd) {	// we have received a new command
-	//	m_LastCmd = inpacket->cmd;
-	//}
-
 	switch(inpacket->cmd) {
 
 	case rPing:
@@ -796,12 +863,9 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 
 	case rStatus:
 		response.cmd = cAck;
-
 		break;
 
-	case rResume:
-		response.cmd = cAck;
-		break;
+
 
 #if 1
 	case rPlay:
@@ -816,6 +880,8 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 		status_packet.flags &= ~0x00B;
 		status_packet.flags |=  0x002;
 		response = status_packet;
+		response.minutes = INT2BCD(player_sec / 60);
+		response.seconds = INT2BCD(player_sec % 60);
 		break;
 
 	case rScnStop:
@@ -870,7 +936,7 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 			echostate = changing1;
 			response.disk = status_packet.disk = inpacket->disk;
 			//status_packet.disk = 9; // test hack!!
-			response.track = status_packet.track = 0;
+			response.track = status_packet.track = 1;
 			response.flags = 0x1001; // busy
 		} else {
 			// zero indicates same disk
@@ -880,16 +946,17 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 			response.disk = status_packet.disk;
 			response.track = status_packet.track = inpacket->track;
 			response.flags = 0x0001; // done
+			player_sec = 0;
 		}
 		break;
 
 
 
-
+	case rResume:
 	case rResumeP:
 		echostate = resuming;
 		status_packet.cmd = (inpacket->cmd == rResume) ? cPlaying : cPaused;
-		response.cmd = rStop;
+		response.cmd = cPlaying;
 		response.disk = status_packet.disk;
 		response.track = status_packet.track;
 		response.flags = 0x0001; // done
@@ -910,9 +977,7 @@ uint8_t mbus_process(const char *raw_received, const mbus_data_t *inpacket, char
 	if (response.cmd != eInvalid) {
 		//*sched_timer = 0; // discipline myself: no timer if responding
 		mbus_encode(&response, buffer);
-		strcpy(last_sent, buffer); // remember for echo check
-		echo_waitstate = True;
-
+		//strcpy(last_sent, buffer); // remember for echo check
 		return 1;
 	}
 

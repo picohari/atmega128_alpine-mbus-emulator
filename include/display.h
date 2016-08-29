@@ -1,24 +1,41 @@
-/*
- * WEHRsim Control
+/****************************************************************************
+ * Copyright (C) 2016 by Harald W. Leschner (DK6YF)                         *
+ *                                                                          *
+ * This file is part of ALPINE M-BUS Interface Control Emulator             *
+ *                                                                          *
+ * This program is free software you can redistribute it and/or modify		*
+ * it under the terms of the GNU General Public License as published by 	*
+ * the Free Software Foundation either version 2 of the License, or 		*
+ * (at your option) any later version. 										*
+ *  																		*
+ * This program is distributed in the hope that it will be useful, 			*
+ * but WITHOUT ANY WARRANTY without even the implied warranty of 			*
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 			*
+ * GNU General Public License for more details. 							*
+ *  																		*
+ * You should have received a copy of the GNU General Public License 		*
+ * along with this program if not, write to the Free Software 				*
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA*
+ ****************************************************************************/
+
+/**
+ * @file display.h
  *
- * Copyright (C) 2008  H9-Laboratory Ltd.
- * All rights reserved
+ * @author Harald W. Leschner (DK6YF)
+ * @date 23.08.2016
  *
- * CREATED			:	18.10.2008
- * VERSION			: 	1.0
- * TARGET DEVICE	: 	ATMEL ATmega128
+ * @brief HD44780 LCD driver routines
  *
+ * Here typically goes a more extensive explanation of what the header
+ * defines. Doxygens tags are words preceeded by either a backslash @\
+ * or by an at symbol @@.
  *
+ * @see http://www.stack.nl/~dimitri/doxygen/docblocks.html
+ * @see http://www.stack.nl/~dimitri/doxygen/commands.html
  */
 
 
- /*!
- * @file 	display.h
- * @brief 	LCD-Module Functions
- *
- * @author	H9-Laboratory Ltd. (office@h9l.net)
- * @date 	18.10.2008
- */
+
 
 #ifndef DISPLAY_H_
 #define DISPLAY_H_

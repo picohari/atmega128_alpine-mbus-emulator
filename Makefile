@@ -608,7 +608,7 @@ clean_list :
 
 # Create object files directory
 $(shell mkdir $(OBJDIR) 2>/dev/null)
-$(shell mkdir $(OBJDIR)/usbdrv 2>/dev/null)
+#$(shell mkdir $(OBJDIR)/usbdrv 2>/dev/null)
 
 
 # Include the dependency files.
