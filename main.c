@@ -59,8 +59,6 @@
 #include <avr/eeprom.h>
 
 
-
-
 static void init (void) {
 
 	PORTA = 0; DDRA = 0;	// All Inputs -> all zeros
@@ -100,10 +98,6 @@ static void init (void) {
 }
 
 
-
-
-
-
 int main (void) {
 
 	/* Initiate all */
@@ -117,9 +111,7 @@ int main (void) {
 
     sei();
 
-
-
-    
+   
     for (;;) {
 
         /* Perform some player timings and simulations */
@@ -145,6 +137,7 @@ int main (void) {
         }
 
 
+
         /* check if there is a command to be decoded */
         if (rx_packet.decode) {
 
@@ -161,10 +154,7 @@ int main (void) {
         }
 
         display_cursor(4, 1);
-        display_printf("D:%d T:%0d %0d:%02d", status_packet.disk, status_packet.track, status_packet.minutes, status_packet.seconds);
-
-
-
+        display_printf("D:%d T:%02d %02d:%02d", status_packet.disk, BCD2INT(status_packet.track), status_packet.minutes, status_packet.seconds);
 
 
 
@@ -183,29 +173,6 @@ int main (void) {
 
             tx_packet.send = False;
         }
-
-
-
-
-
-
-
-#if 0
-
-        char szResponseBuf[64] = {'\0'};
-        m_dwRecallTime = 0;
-        hr = m_ChangerEmu.ProcessCommand(pszLine, &Packet, szResponseBuf, &m_dwRecallTime);
-        if (hr == S_OK)
-        {   // wants to send a response
-            strcat(szResponseBuf, "\r\n");
-            m_serial.sendData(szResponseBuf, strlen(szResponseBuf));
-
-        }
-        if (m_dwRecallTime)
-        {   // wants to be notified again
-            SetTimer(IDD, m_dwRecallTime, NULL);
-        }
-#endif
 
 
 	} /* End for (;;) */

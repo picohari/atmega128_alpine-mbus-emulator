@@ -730,6 +730,7 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 				//if (status_packet.track > 0x99)
 				//	status_packet.track = 0;
 			}
+
 #if 0
 			else if (status_packet.cmd == cPaused) {
 				response.minutes = INT2BCD(player_sec / 60);
@@ -866,8 +867,6 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 		break;
 
 
-
-#if 1
 	case rPlay:
 		status_packet.cmd = cPlaying;
 		status_packet.flags &= ~0x00B;
@@ -879,9 +878,9 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 		status_packet.cmd = cPaused;
 		status_packet.flags &= ~0x00B;
 		status_packet.flags |=  0x002;
+		response.minutes = INT2BCD(status_packet.minutes);
+		response.seconds = INT2BCD(status_packet.seconds);
 		response = status_packet;
-		response.minutes = INT2BCD(player_sec / 60);
-		response.seconds = INT2BCD(player_sec % 60);
 		break;
 
 	case rScnStop:
@@ -946,17 +945,15 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 			response.disk = status_packet.disk;
 			response.track = status_packet.track = inpacket->track;
 			response.flags = 0x0001; // done
-			player_sec = 0;
 		}
+		player_sec = 0; // restart timer 
 		break;
-
-
 
 	case rResume:
 	case rResumeP:
 		echostate = resuming;
 		status_packet.cmd = (inpacket->cmd == rResume) ? cPlaying : cPaused;
-		response.cmd = cPlaying;
+		response.cmd = cChanging;
 		response.disk = status_packet.disk;
 		response.track = status_packet.track;
 		response.flags = 0x0001; // done
@@ -964,11 +961,9 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 	
 
 
-#endif
-
 	default:
-		//response.cmd = cAck;
-		response.cmd = eInvalid;
+		response.cmd = cAck;
+		//response.cmd = eInvalid;
 		//response.cmd = cPingOK;
 
 	} // switch(inpacket->cmd)
