@@ -57,7 +57,7 @@ mbus_tx_t tx_packet;
 
 char mbus_outbuffer[MBUS_BUFFER];
 
-uint8_t mbus_tobesend;
+uint8_t mbus_tobesend = 0;
 
 char mbus_inbuffer[MBUS_BUFFER];
 

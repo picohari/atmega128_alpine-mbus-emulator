@@ -156,6 +156,20 @@ int main (void) {
         display_cursor(4, 1);
         display_printf("D:%d T:%02d %02d:%02d", status_packet.disk, BCD2INT(status_packet.track), status_packet.minutes, status_packet.seconds);
 
+        // 12345678901234567890
+        // D:1 T:01 00:00 R-ALL // R-ONE // SCAN_ // MIX__
+
+        display_cursor(4, 16);
+        if (status_packet.flags && 0x400)
+            display_printf("R-ONE");
+        else if (status_packet.flags && 0x800)
+            display_printf("R-ALL");
+        else if (status_packet.flags && 0x080)
+            display_printf("SCAN");
+        else if (status_packet.flags && 0x020)
+            display_printf(" MIX ");
+        else
+            display_printf("     ");
 
 
         /* check if there is a command to be sent */
