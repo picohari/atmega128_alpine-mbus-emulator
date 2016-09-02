@@ -1,9 +1,3 @@
-# atmega128_alpine-mbus-emulator
-
-This is my working copy of collected sources, mainly the only well known and copied many times: http://www.hohensohn.info/mbus/
-
-Still some bugs to come...
-
 # Alpine M-Bus CD Changer Emulator for ATmega128 with LCD and UART
 
 This firmware emulates a ALPINE M-BUS cd changer like the one I have in my car. As the AUDIO IN from the cd changer is only un-muted if the changer has responsed
@@ -16,7 +10,8 @@ Some minor changes have been made to the state-machine based communication contr
 
 ## Installation
 
-My avr-gcc -v gives:
+My `avr-gcc -v` gives:
+```
 Using built-in specs.
 COLLECT_GCC=avr-gcc
 COLLECT_LTO_WRAPPER=/usr/local/avr/libexec/gcc/avr/4.8.5/lto-wrapper
@@ -24,7 +19,7 @@ Target: avr
 Configured with: ../configure --target=avr --prefix=/usr/local/avr --disable-nsl --enable-languages=c,c++ --disable-libssp
 Thread model: single
 gcc version 4.8.5 (GCC) 
-
+```
 Simply run the makefile with 'make'
 
 ## Usage
