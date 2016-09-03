@@ -8,8 +8,6 @@ from the well known and ever copied since: http://www.hohensohn.info/mbus/
 
 Some minor changes have been made to the state-machine based communication control and ISR receiving code.
 
-The emulator provides a 
-
 ## Installation
 
 My `avr-gcc -v` gives:
@@ -25,17 +23,28 @@ gcc version 4.8.5 (GCC)
 ```
 Simply run the makefile with `make`
 
-## Usage
+After this, run `avrdude -cusbasp -pm128 -Uflash:w:main.hex` to flash the firmware onto the controller. Here I use the [USBasp](http://www.fischl.de/usbasp/).
 
-The voltage on the M-Bus is about 10V and drops off very quickly if the load is too high. I took two small signal NPN transistors to do the level shifting:
+## Hardware
+
+The voltage on the M-Bus is about 10V and drops off very quickly if the load is too high. During my tests, the solution with the Z-Diode didn't work, so I took two small signal NPN transistors to do the level shifting:
 
 ![alt tag](https://raw.githubusercontent.com/picohari/atmega128_alpine-mbus-emulator/master/M-BUS_Adapter/adapter.png)
 
 The signals coming from the microcontroller are inverted: a logic "1" (5V) on the output pin pulls DOWN the line on the bus through Q1. A logic "0" will keep it HIGH by the internal pull-up resistor in the head unit.
 If the bus line goes LOW and the beginning of a logic "1" is signalled by the falling edge, R1 pulls the level on the receiving pin to HIGH and the ISR is triggered.
 
+Pin PD4 is used as input for receiving packets (Input Capture Pin ICP1) and PD5 is configured as output pin to drive the bus line LOW.
+
 ![alt tag](https://raw.githubusercontent.com/picohari/atmega128_alpine-mbus-emulator/master/M-BUS_Adapter/board.png)
 
+A simple breadboard setup is done in less than 10 minutes. I like very much the ET-BASE boards from ETT (http://www.ett.co.th/product/03000AVR.html) for development and this is how looks like:
+
+## Software
+
+Not much to say, look at the source code. The playing of a CD is emulated by Timer2. Timer1 capture reads the incoming packets and Timer0 is used for sending. I've refactored the original sources and removed this ugly-looking hungarian notation to get some cleaner plain C - it's still not yet completed and leaks further commenting, ...
+
+I will do some more measurements on the timing and include screenshots of the logic analyzer. More to come. 
 
 ## Contributing
 
@@ -52,7 +61,7 @@ TODO: Write history
 ## Credits
 
 http://www.hohensohn.info/mbus/
-TODO: Write more credits
+
 
 ## License
 
