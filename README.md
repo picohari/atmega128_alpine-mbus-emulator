@@ -1,12 +1,14 @@
 # Alpine M-Bus CD Changer Emulator for ATmega128 with LCD and UART
 
-This firmware emulates a ALPINE M-BUS cd changer like the one I have in my car. As the AUDIO IN from the cd changer is only un-muted if the changer has responsed
+This firmware emulates an ALPINE M-BUS cd changer, like the one I have in my car. As the AUDIO IN from the cd changer is only un-muted if the changer has responsed
  to the commands coming from the head unit, it is NOT possible to apply an external MP3 player or other signal from outside the radio :(
 
 Thus the need for a little emulator project with our little friend, the ATmega128 from ATMEL and GCC! The sources for the decoding and encoding routines originates 
 from the well known and ever copied since: http://www.hohensohn.info/mbus/
 
 Some minor changes have been made to the state-machine based communication control and ISR receiving code.
+
+The emulator provides a 
 
 ## Installation
 
@@ -16,15 +18,24 @@ Using built-in specs.
 COLLECT_GCC=avr-gcc
 COLLECT_LTO_WRAPPER=/usr/local/avr/libexec/gcc/avr/4.8.5/lto-wrapper
 Target: avr
-Configured with: ../configure --target=avr --prefix=/usr/local/avr --disable-nsl --enable-languages=c,c++ --disable-libssp
+Configured with: ../configure --target=avr --prefix=/usr/local/avr --disable-nsl
+--enable-languages=c,c++ --disable-libssp
 Thread model: single
 gcc version 4.8.5 (GCC) 
 ```
-Simply run the makefile with 'make'
+Simply run the makefile with `make`
 
 ## Usage
 
-TODO: Write usage instructions and upload schematics
+The voltage on the M-Bus is about 10V and drops off very quickly if the load is too high. I took two small signal NPN transistors to do the level shifting:
+
+![alt tag](https://raw.githubusercontent.com/picohari/atmega128_alpine-mbus-emulator/master/M-BUS_Adapter/adapter.png)
+
+The signals coming from the microcontroller are inverted: a logic "1" (5V) on the output pin pulls DOWN the line on the bus through Q1. A logic "0" will keep it HIGH by the internal pull-up resistor in the head unit.
+If the bus line goes LOW and the beginning of a logic "1" is signalled by the falling edge, R1 pulls the level on the receiving pin to HIGH and the ISR is triggered.
+
+![alt tag](https://raw.githubusercontent.com/picohari/atmega128_alpine-mbus-emulator/master/M-BUS_Adapter/board.png)
+
 
 ## Contributing
 
