@@ -23,7 +23,7 @@ gcc version 4.8.5 (GCC)
 ```
 Simply run the makefile with `make`
 
-After this, run `avrdude -cusbasp -pm128 -Uflash:w:main.hex` to flash the firmware onto the controller. Here I use the [USBasp](http://www.fischl.de/usbasp/).
+After this, run `avrdude -cusbasp -pm128 -Uflash:w:main.hex` to flash the firmware onto the controller. On my board the external oscillator has 16Mhz, the timing parameters in the code have been adjusted to this value. To program the AVR and set fuses I prefer the [USBasp](http://www.fischl.de/usbasp/).
 
 ## Hardware
 
@@ -31,10 +31,10 @@ The voltage on the M-Bus is about 10V and drops off very quickly if the load is 
 
 ![alt tag](https://raw.githubusercontent.com/picohari/atmega128_alpine-mbus-emulator/master/M-BUS_Adapter/adapter.png)
 
-The signals coming from the microcontroller are inverted: a logic "1" (5V) on the output pin pulls DOWN the line on the bus through Q1. A logic "0" will keep it HIGH by the internal pull-up resistor in the head unit.
+The signals coming from the microcontroller are inverted: a logic "1" (5V) on the output pin pulls down LOW the line on the bus through Q1. A logic "0" will keep it HIGH by the internal pull-up resistor in the head unit.
 If the bus line goes LOW and the beginning of a logic "1" is signalled by the falling edge, R1 pulls the level on the receiving pin to HIGH and the ISR is triggered.
 
-Pin PD4 is used as input for receiving packets (Input Capture Pin ICP1) and PD5 is configured as output pin to drive the bus line LOW.
+On the AVR ATmeag128 pin PD4 is used as input for receiving packets (Input Capture Pin Timer 1: ICP1) and PD5 is configured as output pin to drive the bus line LOW.
 
 ![alt tag](https://raw.githubusercontent.com/picohari/atmega128_alpine-mbus-emulator/master/M-BUS_Adapter/board.png)
 
