@@ -93,7 +93,7 @@ typedef struct
 	char infotext[32];
 } code_item_t;
 
-static const code_item_t alpine_codetable[] = 
+static const code_item_t alpine_codetable[] =
 {
 	{ rPing, 		"18", 				"Ping" },
 	{ cPingOK, 		"98", 				"Ping OK" },
@@ -126,7 +126,7 @@ static const code_item_t alpine_codetable[] =
 	{ rMix,       	"11402000", 		"Mix" },
 	{ cPwrUp, 		"9A0000000000", 	"some powerup?" },
 	{ cLastInfo,  	"9B0dttfff0f", 		"last played" }, // f0=0:done, f0=1:busy, f0=8:eject, //f1=4: repeat1, f1=8:repeat all, f2=2:mix
-	{ cChanging,  	"9B9dttfff0f", 		"Changing" }, 
+	{ cChanging,  	"9B9dttfff0f", 		"Changing" },
 	{ cChanging4, 	"9B8d00fff0f", 		"Changing Phase 4" },
 	{ cNoMagzn,   	"9BAd00f00ff", 		"No Magazin" },
 	{ cChanging1, 	"9BDd00fff0f", 		"Changing Phase 1" },
@@ -159,7 +159,7 @@ void init_eeprom (void)
 		DEFAULT_BIT_TIME, 		// EE_SEND_BIT_TIME
 		DEFAULT_SPACE, 			// EE_SEND_SPACE
 	};
-	
+
 	for (i = 0; i < sizeof(ee_table) / sizeof(*ee_table); i++) {
 		if (eeprom_read_byte((uint8_t *)(uint16_t)i) == 0xFF) { 		// virgin?
 			eeprom_write_byte((uint8_t *)(uint16_t)i, ee_table[i]);
@@ -206,12 +206,12 @@ int8_t calc_checksum(char *buffer, uint8_t len)
 {
 	int8_t checksum = 0;
 	int8_t i;
-	
+
 	for (i = 0; i < len; i++) {
 		checksum ^= hex2int(buffer[i]);
 	}
 	checksum = (checksum + 1) % 16;
-	
+
 	return checksum;
 }
 
@@ -244,7 +244,7 @@ void init_mbus (void)
 	//TCCR1B = _BV(ICNC1) | _BV(CTC1) | _BV(CS12); // noise filter, reset on match, prescale
 	//TCCR1B = _BV(ICNC1) | _BV(CS12); // noise filter, reset on match, prescale
 	TCCR1B =  (1 << ICES1) | (1 << ICNC1) | (1 << CS12) ; 	// capture on rising edge, noise filter
-	
+
 	OCR1H = 0; 					// we use only the lower part, but have to write this first
 	OCR1L = BIT_TIMEOUT; 		// have to complete a bit within this time
 
@@ -256,16 +256,16 @@ void init_mbus (void)
 	DDR_MBUS_OUT |= (1 << PIN_MBUS_OUT);
 
 	DDR_DEBUG  |=  (1 << PIN_DEBUG);
-	PORT_DEBUG &= ~(1 << PIN_DEBUG); 
+	PORT_DEBUG &= ~(1 << PIN_DEBUG);
 	//TCCR1A = _BV(COM1A0); // test: toggle OC1 at compare match
 
-	/* FIFOs für Ein- und Ausgabe initialisieren */ 
-    memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));
-    
-    rx_packet.num_nibbles = 0;
+	/* FIFOs für Ein- und Ausgabe initialisieren */
+  memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));
 
-    /* Changer simulator setup */
-    echostate = quiet;
+	rx_packet.num_nibbles = 0;
+
+  /* Changer simulator setup */
+  echostate = quiet;
 
 	status_packet.source = eCD;
 	status_packet.chksum = -1;
@@ -290,16 +290,16 @@ void init_mbus (void)
 
 // edge detection interrupt, the heart of receiving
 ISR(TIMER1_CAPT_vect)
-{	
+{
 	char outchar = 0;
 
 	//PORT_DEBUG |= _BV(PIN_DEBUG); 	// debug, indicate loop
-	
+
 	switch (rx_packet.state) {
 
 	case wait: 						// a packet is starting
 		rx_packet.num_bits = 0;
-		//TIMSK |= (1 << OCIE1A);		// Enable overflow/compare 
+		//TIMSK |= (1 << OCIE1A);		// Enable overflow/compare
 		// no break, fall through
 
 	case low: // high phase between bits has ended, start of low pulse
@@ -307,7 +307,7 @@ ISR(TIMER1_CAPT_vect)
 		TCNT1H = 0; // reset the timer, high byte first
 		TCNT1L = 0;
 		TIFR |= (1 << OCF1A); 		// clear timeout pending, to be shure
-	
+
 		rx_packet.state = high;
 		TCCR1B &= ~(1 << ICES1); 	// capture on falling edge
 		break;
@@ -345,10 +345,10 @@ ISR(TIMER1_CAPT_vect)
 		rx_packet.num_bits++;
 
 		if ((rx_packet.num_bits % 4) == 0) { 	// 4 bits completed?
-		
+
 			uint8_t i;
 			uint8_t uHexDigit = 0;
-			
+
 			for (i = 0; i < 4; i++) {			// convert to binary
 				if (rx_packet.rxbits[i] == '1')
 					uHexDigit |= (1 << (3 - i));
@@ -358,7 +358,7 @@ ISR(TIMER1_CAPT_vect)
 
 			/* HEX-DIGIT 0..9-A..F and send it out */
 			uint8_t value = int2hex(uHexDigit);
-			
+
 			/* Send via UART */
 			uint8_t *res_ptr = &value;
 			uart_write(res_ptr, 1);
@@ -381,7 +381,7 @@ ISR(TIMER1_COMPA_vect)
 		return; // timeouts don't matter
 
 	//PORT_DEBUG |= _BV(PIN_DEBUG); 	// debug, indicate loop
-	
+
 	rx_packet.state = wait; 	// start looking for a new packet
 	//TCCR1B &= ~_BV(ICES1); 	// capture on falling edge
 	TCCR1B |= (1 << ICES1); 	// capture on rising edge
@@ -415,7 +415,7 @@ ISR(TIMER1_COMPA_vect)
 // timer 0 overflow, used for sending
 ISR(TIMER0_OVF_vect)
 {
-	
+
 	switch (tx_packet.state)
 	{
 	case start: // start of a bit, or maybe the packet
@@ -432,7 +432,7 @@ ISR(TIMER0_OVF_vect)
 				An dieser Stelle müssen die Bytes aus dem Array mbus_outbuffer[]
 				EINZELN geholt werden, damit sie gesendet werden können.
 				*/
-				
+
 				/* ENCODER */
 				fetched = mbus_outbuffer[mbus_tobesend++];	// Version for EMULATOR input
 
@@ -446,9 +446,9 @@ ISR(TIMER0_OVF_vect)
 				tx_packet.cur_nibble = hex2int(fetched);
 
 			} while (fetched != '\r' && tx_packet.cur_nibble == 0xFF);
-			
+
 			//PORT_DEBUG &= ~_BV(PIN_DEBUG); // debug end
-			
+
 			if (fetched == '\r') {		// done with this line (packet)
 				TCNT0 -= SEND_SPACE; 	// space til the next transmision can start
 				tx_packet.state = ende;
@@ -475,20 +475,20 @@ ISR(TIMER0_OVF_vect)
 		tx_packet.state = start;
 		TCNT0 -= (SEND_BIT_TIME - SEND_ZERO_TIME); 	// next edge
 		break;
-	
+
 	case low_1:
 		PORT_MBUS_OUT &= ~_BV(PIN_MBUS_OUT); 		// release the line
 		tx_packet.state = start;
 		TCNT0 -= (SEND_BIT_TIME - SEND_ONE_TIME); 	// next edge
 		break;
-		
+
 	case ende:
 		TIMSK &= ~_BV(TOIE0); 		// stop timer0 interrupts
 		TCCR0  = (1 << CS00); 		// set to "immediate interrupt" mode again
 		TCNT0 = -1; 				// next interrupt will be pending immediately, but is masked
 		tx_packet.state = start;
 		tx_packet.num_bits = 0; 	// reset the bit counter again
-		
+
 		mbus_tobesend =  0;
 		//memset(&mbus_outbuffer, '\0', sizeof(mbus_outbuffer));	// delete content of inbuffer and start over
 		PORT_DEBUG &= ~_BV(PIN_DEBUG); // debug, indicate loop
@@ -504,7 +504,7 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 {
 	size_t len = strlen(packet_src);
 	size_t i, j;
-	
+
 	// reset all the decoded information
 	mbuspacket->source = eUnknown;
 	mbuspacket->chksum = -1;
@@ -546,7 +546,7 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 		for (j = 0; j < len; j++) {
 			// all (upper case) hex digits of the hexmask must match
 			if ((*cmp_ptr >= '0' &&  *cmp_ptr <= '9') || (*cmp_ptr >= 'A' &&  *cmp_ptr <= 'F')) {
-			
+
 				if (*cmp_ptr != *src_ptr)
 					break; // exit the char loop
 			}
@@ -557,9 +557,9 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 		if (j == len) {
 			// a match, now decode parameters if present
 			for (j = 0; j < len; j++) {
-			
+
 				switch (alpine_codetable[i].hexmask[j]) {
-				
+
 				case 'd': // disk
 					mbuspacket->disk = (mbuspacket->disk << 4) | hex2int(packet_src[j]);
 					mbuspacket->validcontent |= F_DISK;
@@ -602,7 +602,7 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 				uart_write((uint8_t *)LINE_FEED, strlen(LINE_FEED));
 				memset(&mbus_inbuffer, '\0', sizeof(mbus_inbuffer));
 			}
-			
+
 			break; // exit the command loop
 		}
 	}
@@ -700,7 +700,7 @@ uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest)
 // destination for the answer packet string
 // set to milliseconds units in wished to be called again
 
-uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall) 			
+uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall)
 {
 	uint8_t hr = 1; 		// default is do reply
 	mbus_data_t response;
@@ -718,7 +718,7 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 			echostate = (status_packet.cmd == cPlaying) ? playing : quiet;
 			response = status_packet;
 			break;
-			
+
 		case playing:
 			response = status_packet;
 			if (status_packet.cmd == cPlaying) {
@@ -738,7 +738,7 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 				mbus_encode(&response, buffer);
 				return 1;
 			}
-			
+
 			else
 				hr = 0;
 #endif
@@ -789,17 +789,17 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 				echo_waitstate = True;
 			}
 			return hr;
-		
+
 		} else {	// what to do on collision? try sending again
 			strcpy(buffer, last_sent); // copy old to output
 			//return 1; // send again
 		}
 
 	}
-#endif 
+#endif
 
 
-#if 0	
+#if 0
 	if (inpacket == NULL ) {	// response from timer, not by reception (could be a seperate function in future)
 
 		//uart_write((uint8_t *)"N", 1);
@@ -812,7 +812,7 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 				if (status_packet.track > 0x99)
 					status_packet.track = 0;
 			}
-			else 
+			else
 				hr = 0;
 			break;
 
@@ -827,7 +827,7 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 			strcpy(last_sent, buffer); // remember for echo check
 			echo_waitstate = True;
 		}
-		
+
 		return hr;
 	}
 #endif
@@ -841,7 +841,7 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 			//uart_write((uint8_t *)"c", 1);	// checksum error
 			return 0;
 		}
-	
+
 
 		if (inpacket->source != eRadio) {
 			//uart_write((uint8_t *)"s", 1);	// destination error
@@ -852,7 +852,7 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 
 #endif
 
-	
+
 	// generate immediate response to radio command, want to see no timer spawn here
 
 
@@ -946,7 +946,7 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 			response.track = status_packet.track = inpacket->track;
 			response.flags = 0x0001; // done
 		}
-		player_sec = 0; // restart timer 
+		player_sec = 0; // restart timer
 		break;
 
 	case rResume:
@@ -958,7 +958,7 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 		response.track = status_packet.track;
 		response.flags = 0x0001; // done
 		break;
-	
+
 
 
 	default:
@@ -967,8 +967,8 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 		//response.cmd = cPingOK;
 
 	} // switch(inpacket->cmd)
-	
-	
+
+
 	if (response.cmd != eInvalid) {
 		//*sched_timer = 0; // discipline myself: no timer if responding
 		mbus_encode(&response, buffer);

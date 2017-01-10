@@ -49,23 +49,27 @@
 #define PIN_RX_UF    PB4 		// RX underflow error, no char available
 #define PIN_DEBUG    PB7 		// debug condition
 
-#elif defined(__AVR_ATmega128__) 	// trying the Mega8 now
+#elif defined(__AVR_ATmega128__) 	// trying the Mega128 now (YELLOW)
 #define PIN_MBUS_OUT  PD5   		// MBus output pin (active = pull low)
 #define PORT_MBUS_OUT PORTD 		// MBus output pin (active = pull low)
 #define DDR_MBUS_OUT  DDRD 			// MBus output pin (active = pull low)
+
 //#define PIN_TX_OF    PB1 			// Really strange: PIN_MBUS_OUT becomes weak
 //#define PIN_RX_OF    PB1 			//  if any other b-port pin than 3 used for it,
 //#define PIN_RX_UF    PB0 			//  or any other than 1 is used additionally.
+
 #define PIN_DEBUG    PC0 			//  So I map all error pins to 1.
 #define PORT_DEBUG   PORTC  		//  So I map all error pins to 1.
 #define DDR_DEBUG    DDRC  			//  So I map all error pins to 1.
 
-#define CTC1 	WGM12
-#define OCR1H 	OCR1AH
-#define OCR1L 	OCR1AL
-#define TICIE 	TICIE1
-#define UBRR 	UBRRL
-#define UCR 	UCSRB
+
+// INPUT from M-BUS connected to PD4 (ICP1) (ORANGE)
+#define CTC1		WGM12
+#define OCR1H		OCR1AH
+#define OCR1L		OCR1AL
+#define TICIE		TICIE1
+#define UBRR		UBRRL
+#define UCR			UCSRB
 
 #else
 #error "Code is not prepared for that MCU!"
@@ -152,7 +156,7 @@ typedef struct
 	uint8_t num_bits; 	// # of received bits
 	volatile uint8_t num_nibbles;	// # of stored nibbles in buffer
 	volatile uint8_t decode;
-} mbus_rx_t; 
+} mbus_rx_t;
 
 
 typedef struct
@@ -167,7 +171,7 @@ typedef struct
 		ende,   // end of sequence
 	} state;
 	volatile uint8_t send;
-} mbus_tx_t; 
+} mbus_tx_t;
 
 
 typedef enum {
@@ -274,7 +278,7 @@ uint8_t mbus_searchbuffer(uint8_t key);
 uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest);
 uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src);
 
-uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall); 			
+uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall);
 
 
 
