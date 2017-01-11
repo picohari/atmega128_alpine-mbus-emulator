@@ -39,7 +39,7 @@
 
 #include "config.h"
 #include "global.h"
- 
+
 #include <avr/io.h>
 #include <avr/wdt.h>
 #include <util/delay.h>
@@ -111,25 +111,28 @@ int main (void) {
 
     sei();
 
-   
+
     for (;;) {
 
         /* Perform some player timings and simulations */
         static uint32_t player_ticks = 0;
         static uint32_t sending_ticks = 0;
 
+        // normal CD play action updates only every second
         if (timer_ms_passed(&player_ticks, 1000)) {
 
             if (status_packet.cmd == cPlaying)
                 player_sec++;
 
-            if (player_sec == 5400)
-                player_sec = 0;     
+            if (player_sec == 5400)   // after 90 minutes reset the counter
+                player_sec = 0;
         }
 
+        // update status packet information about playing time
         status_packet.minutes = player_sec / 60;
         status_packet.seconds = player_sec % 60;
 
+        // send every 500ms a new status packet to the head-unit
         if (timer_ms_passed(&sending_ticks, 500)) {
 
             if (status_packet.cmd == cPlaying )
@@ -141,31 +144,35 @@ int main (void) {
         /* check if there is a command to be decoded */
         if (rx_packet.decode) {
 
+
             mbus_decode(&in_packet, mbus_inbuffer);
 
             mbus_process(&in_packet, mbus_outbuffer, False);
 
             rx_packet.decode = False;
 
+            // show the actual decoded command
             display_cursor(1, 1);
             display_printf("                    ");
             display_cursor(1, 1);
             display_printf("%s", in_packet.description);
         }
 
+        // show info about disk, track and playing status
         display_cursor(4, 1);
         display_printf("D:%d T:%02d %02d:%02d", status_packet.disk, BCD2INT(status_packet.track), status_packet.minutes, status_packet.seconds);
 
         // 12345678901234567890
         // D:1 T:01 00:00 R-ALL // R-ONE // SCAN_ // MIX__
 
+        // show info about selected repeat mode
         display_cursor(4, 16);
         if (status_packet.flags && 0x400)
             display_printf("R-ONE");
         else if (status_packet.flags && 0x800)
             display_printf("R-ALL");
         else if (status_packet.flags && 0x080)
-            display_printf("SCAN");
+            display_printf("SCAN ");
         else if (status_packet.flags && 0x020)
             display_printf(" MIX ");
         else
@@ -175,7 +182,7 @@ int main (void) {
         /* check if there is a command to be sent */
         if (!(TIMSK & _BV(TOIE0))                       // not already sending
             && rx_packet.state == wait                  // not receiving
-            && ( /*new_uart ||*/ tx_packet.send )           // newline in receive buffers
+            && ( /*new_uart ||*/ tx_packet.send )       // newline in receive buffers
             ) {
 
 

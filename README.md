@@ -1,16 +1,25 @@
 # Alpine M-Bus CD Changer Emulator for ATmega128 with LCD and UART
 
-This firmware emulates an ALPINE M-BUS cd changer, like the one I have in my car. As the AUDIO IN from the cd changer is only un-muted if the changer has responsed
- to the commands coming from the head unit, it is NOT possible to apply an external MP3 player or other signal from outside the radio :(
+The ALPINE M-BUS is a protocol for the remote control of CD changers used in car audio systems. The purpose of this project is to emulate or pretend the presence of a CD changer to the head-unit to enable the external audio input, tweaking the buttons for other applications or showing data on the display.  
 
-Thus the need for a little emulator project with our little friend, the ATmega128 from ATMEL and GCC! The sources for the decoding and encoding routines originates 
-from the well known and ever copied since: http://www.hohensohn.info/mbus/
+As the audio signal coming from the CD changer is only turned on (un-muted) by the amplifier if the CD changer has replied to the commands coming from the head-unit, it is NOT possible to connect an MP3 player or other auxiliary audio signal from outside the radio without interfacing the M-BUS controller. This is where our project comes into play here: The software decodes the M-BUS commands and emulates the functions of the CD changer/player by sending processed messages (frames) back to the head-unit.
 
-Some minor changes have been made to the state-machine based communication control and ISR receiving code.
+
+## Features
+
+* All major commands supported: playing, skipping, resuming, disk changing, repeat, scan, etc..  
+* M-BUS protocol timings generated/measured by accurate 16bit timer
+* Current status and information display on HD44780 LCD
+* Debug output on UART/serial console
+* Commented & cleaned code
+* More  for own applications
+
 
 ## Installation
 
-My `avr-gcc -v` gives:
+Get a local copy of the repository with `git clone https://github.com/picohari/atmega128_alpine-mbus-emulator.git` or simply download the [zip archive](https://github.com/picohari/atmega128_alpine-mbus-emulator/archive/master.zip).
+
+Check your `avr-gcc -v`, it should be similar to mine:
 ```
 Using built-in specs.
 COLLECT_GCC=avr-gcc
@@ -19,11 +28,28 @@ Target: avr
 Configured with: ../configure --target=avr --prefix=/usr/local/avr --disable-nsl
 --enable-languages=c,c++ --disable-libssp
 Thread model: single
-gcc version 4.8.5 (GCC) 
+gcc version 4.8.5 (GCC)
 ```
-Simply run the makefile with `make`
+Compile the code by running the makefile with `make`
 
-After this, run `avrdude -cusbasp -pm128 -Uflash:w:main.hex` to flash the firmware onto the controller. On my board the external oscillator has 16Mhz, the timing parameters in the code have been adjusted to this value. To program the AVR and set fuses I prefer the [USBasp](http://www.fischl.de/usbasp/).
+On my board the external crystal oscillator has 16Mhz, the timing parameters in the code have been adjusted to match this value.
+
+To program the AVR and set fuses I prefer the [USBasp](http://www.fischl.de/usbasp/).
+
+Run `avrdude -cusbasp -pm128 -Uflash:w:main.hex` to flash the firmware onto the controller.
+
+
+# Implementation
+
+The code was written for our little friend, the ATmega128 from ATMEL and compiled with GCC! The sources for the decoding and encoding routines originates from the well known and ever copied since: http://www.hohensohn.info/mbus/
+
+Some minor changes have been made to the state-machine based communication control routine and to the ISR receiving code. The software is still in development.
+
+Due to the different voltages between head-unit and the AVR controller, a very small piece of hardware is required to perform level adaptation.
+
+
+
+
 
 ## Hardware
 
@@ -40,11 +66,13 @@ On the AVR ATmeag128 pin PD4 is used as input for receiving packets (Input Captu
 
 A simple breadboard setup is done in less than 10 minutes. I like very much the ET-BASE boards from ETT (http://www.ett.co.th/product/03000AVR.html) for development and this is how looks like:
 
+
 ## Software
 
 Not much to say, look at the source code. The playing of a CD is emulated by Timer2. Timer1 capture reads the incoming packets and Timer0 is used for sending. I've refactored the original sources and removed this ugly-looking hungarian notation to get some cleaner plain C - it's still not yet completed and leaks further commenting, ...
 
-I will do some more measurements on the timing and include screenshots of the logic analyzer. More to come. 
+I will do some more measurements on the timing and include screenshots of the logic analyzer. More to come.
+
 
 ## Contributing
 
@@ -54,9 +82,11 @@ I will do some more measurements on the timing and include screenshots of the lo
 4. Push to the branch: `git push origin my-new-feature`
 5. Submit a pull request :D
 
+
 ## History
 
 TODO: Write history
+
 
 ## Credits
 
