@@ -11,8 +11,8 @@ As the audio signal coming from the CD changer is only turned on (un-muted) by t
 * M-BUS protocol timings generated/measured by accurate 16bit timer
 * Current status and information display on HD44780 LCD
 * Debug output on UART/serial console
-* Commented & cleaned code
-* More  for own applications
+* Commented & cleaned code, hardware tested on 7525R head-unit
+* For own mp3 players or just for fun...
 
 
 ## Installation
@@ -32,7 +32,7 @@ gcc version 4.8.5 (GCC)
 ```
 Compile the code by running the makefile with `make`
 
-On my board the external crystal oscillator has 16Mhz, the timing parameters in the code have been adjusted to match this value.
+On my board the external crystal oscillator has 16Mhz, the timing parameters in the code have been adjusted to match this value. Final tuning was made with logic analyzer.
 
 To program the AVR and set fuses I prefer the [USBasp](http://www.fischl.de/usbasp/).
 
@@ -41,14 +41,37 @@ Run `avrdude -cusbasp -pm128 -Uflash:w:main.hex` to flash the firmware onto the 
 
 # Implementation
 
-The code was written for our little friend, the ATmega128 from ATMEL and compiled with GCC! The sources for the decoding and encoding routines originates from the well known and ever copied since: http://www.hohensohn.info/mbus/
+The code was written for our little friend, the ATmega128 microprocessor from ATMEL and compiled with GCC! The sources for the decoding and encoding routines originates from the well known and ever copied since: http://www.hohensohn.info/mbus/
 
-Some minor changes have been made to the state-machine based communication control routine and to the ISR receiving code. The software is still in development.
+Some minor changes have been made to the state-machine based communication control routine and to the ISR receiving code, but the software is still in development...
 
-Due to the different voltages between head-unit and the AVR controller, a very small piece of hardware is required to perform level adaptation.
+Due to the different voltages between head-unit and the AVR controller, a very small piece of hardware is required to perform level adaptation. With my gear, the original schematic from hohensohn.info didn't work for me, so I took a different level shifting circuit.
 
+## Protocol
 
+The M-BUS is kind of pulse-width modulation: A logical "0" is transmitted as a 0.6ms long pulse and a logical "1" is about 1.8ms
 
+![alt tag](https://raw.githubusercontent.com/picohari/atmega128_alpine-mbus-emulator/master/M-BUS_Adapter/m-bus_timing.png)
+
+Here we can see the transmission of the PING command on the left side and the reply on the right side. The signals have been already inverted and converted to 5V for the controller pins.
+
+![alt tag](https://raw.githubusercontent.com/picohari/atmega128_alpine-mbus-emulator/master/M-BUS_Adapter/logic.png)
+
+We read:
+
+|Address  |Command  |Checksum |
+| :------:|:-------:|:-------:|
+| 0 0 0 1 | 1 0 0 0 | 1 0 1 0 |
+|0x01     | 0x08    |0x0A     |
+
+and later the reply (self-decoding on the input line):
+
+|Address  |Command  |Checksum |
+| :------:|:-------:|:-------:|
+| 1 0 0 1 | 1 0 0 0 | 0 0 1 0 |
+|0x09     | 0x08    |0x02     |
+
+Ping - Pong!
 
 
 ## Hardware
