@@ -135,23 +135,7 @@ int main (void) {
         if (timer_ms_passed(&sending_ticks, 500)) {
 
             if (status_packet.cmd == cPlaying ) {
-
-                /* Show info about selected repeat mode */
-                #ifdef HD44780_AVAILABLE
-                    hd44780_cursor(1, 16);
-                    if (status_packet.flags & 0x400)
-                        hd44780_printf("R-ONE");
-                    if (status_packet.flags & 0x800)
-                        hd44780_printf("R-ALL");
-                    if (status_packet.flags & 0x080)
-                        hd44780_printf("SCAN ");
-                    if (status_packet.flags & 0x020)
-                        hd44780_printf(" MIX ");
-                    else
-                        hd44780_printf("     ");
-                #endif
-
-                mbus_process(&in_packet, mbus_outbuffer, True);
+                mbus_process(&in_packet, mbus_outbuffer, true);
             }
         }
 
@@ -159,20 +143,11 @@ int main (void) {
         /* check if there is a command to be decoded */
         if (rx_packet.decode) {
 
-
             mbus_decode(&in_packet, mbus_inbuffer);
 
-            mbus_process(&in_packet, mbus_outbuffer, False);
+            mbus_process(&in_packet, mbus_outbuffer, false);
 
-            rx_packet.decode = False;
-
-            /* show the actual decoded command on LCD */
-            #ifdef HD44780_AVAILABLE
-                hd44780_cursor(4, 1);
-                hd44780_printf("                    ");
-                hd44780_cursor(4, 1);
-                hd44780_printf("%s", in_packet.description);
-            #endif
+            rx_packet.decode = false;
         }
 
 
@@ -180,15 +155,34 @@ int main (void) {
         #ifdef HD44780_AVAILABLE
             hd44780_cursor(1, 1);
             hd44780_printf("D:%d T:%02d %02d:%02d", status_packet.disk, status_packet.track, player_sec / 60, player_sec % 60);
+        
+            /* show the actual decoded command on LCD */
+            hd44780_cursor(4, 1);
+            hd44780_printf("                    ");
+            hd44780_cursor(4, 1);
+            hd44780_printf("%s", in_packet.description);
+
+            /* Show info about selected repeat mode */
+            hd44780_cursor(1, 16);
+            if (status_packet.flags & 0x020)
+                hd44780_printf(" MIX ");
+            if (status_packet.flags & 0x080)
+                hd44780_printf("SCAN ");
+            if (status_packet.flags & 0x400)
+                hd44780_printf("R-ONE");
+            if (status_packet.flags & 0x800)
+                hd44780_printf("R-ALL");
+            else
+                hd44780_printf("     ");
+
         #endif
 
 
         /* check if there is a command to be sent */
         if (!(TIMSK & _BV(TOIE0))                       // not already sending
             && rx_packet.state == wait                  // not receiving
-            && ( /*new_uart ||*/ tx_packet.send )       // newline in receive buffers
+            && ( /*new_uart ||*/ tx_packet.send )       // have something to send
             ) {
-
 
             // start sending the transmission
             tx_packet.state = start;
@@ -196,7 +190,7 @@ int main (void) {
             TCNT0 = 0;                              // reset timer because ISR only offsets to it
             TIMSK |= _BV(TOIE0);                    // start the output handler with timer0
 
-            tx_packet.send = False;
+            tx_packet.send = false;
         }
 
 

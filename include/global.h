@@ -60,11 +60,11 @@
 #define uint32	uint32_t	/*!< unsigned 32-Bit-Zahl */
 #define	int32	int32_t		/*!< signed 32-Bit-Zahl */
 
-#define True	1			/**< wahr */
-#define False	0			/**< falsch */
+#define true	1			/**< wahr */
+#define false	0			/**< falsch */
 
-#define On		1			/**< an */
-#define Off		0			/**< aus */
+#define on		1			/**< an */
+#define off		0			/**< aus */
 
 #define binary(var, bit) ((var >> bit) & 1)	/**< gibt das Bit "bit" von "var" zurueck */
 

@@ -80,7 +80,7 @@ OBJDIR = obj
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c hd44780.c fifo.c log.c timer.c uart.c mbus.c
+SRC = $(TARGET).c hd44780.c fifo.c log.c timer.c uart.c mbus_proto.c mbus_emul.c
 #SRC = $(TARGET).c usbdrv/usbdrv.c usbdrv/oddebug.c
 
 

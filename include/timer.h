@@ -169,8 +169,8 @@ uint32_t timer_get_tickcount_32(void)
  * Prueft, ob seit dem letzten Aufruf mindestens ms Millisekunden vergangen sind.
  * 32-Bit Version, fuer Code, der (teilweise) seltener als alle 11 s aufgerufen wird.
  * @param old_ticks		Zeiger auf eine Variable, die einen Timestamp speichern kann
- * @param ms			Zeit in ms, die vergangen sein muss, damit True geliefert wird
- * @return				True oder False
+ * @param ms			Zeit in ms, die vergangen sein muss, damit true geliefert wird
+ * @return				true oder false
  *
  * Die Funktion aktualisiert den Timestamp, der die alte Zeit zum Vergleich speichert, automatisch,
  * falls ms Millisekunden vergangen sind.
@@ -190,9 +190,9 @@ timer_ms_passed_32(uint32_t *old_ticks, uint32_t ms)
 	uint32_t ticks = TIMER_GET_TICKCOUNT_32;
 	if ((uint32_t)(ticks - *old_ticks) > MS_TO_TICKS(ms)) {
 		*old_ticks = ticks;
-		return True;
+		return true;
 	}
-	return False;
+	return false;
 }
 
 /*!
@@ -200,8 +200,8 @@ timer_ms_passed_32(uint32_t *old_ticks, uint32_t ms)
  * Siehe auch timer_ms_passed_32()
  * 16-Bit Version, fuer Code, der alle 11 s oder oefter ausgefuehrt werden soll.
  * @param old_ticks		Zeiger auf eine Variable, die einen Timestamp speichern kann
- * @param ms			Zeit in ms, die vergangen sein muss, damit True geliefert wird
- * @return				True oder False
+ * @param ms			Zeit in ms, die vergangen sein muss, damit true geliefert wird
+ * @return				true oder false
  */
 static inline uint8_t
 #ifndef DOXYGEN
@@ -212,9 +212,9 @@ timer_ms_passed_16(uint16_t *old_ticks, uint32_t ms)
 	uint16_t ticks = TIMER_GET_TICKCOUNT_16;
 	if ((uint16_t)(ticks - *old_ticks) > MS_TO_TICKS(ms)) {
 		*old_ticks = ticks;
-		return True;
+		return true;
 	}
-	return False;
+	return false;
 }
 
 /*!
@@ -222,8 +222,8 @@ timer_ms_passed_16(uint16_t *old_ticks, uint32_t ms)
  * Siehe auch timer_ms_passed_32()
  * 8-Bit Version, fuer Code, der alle 40 ms oder oefter ausgefuehrt werden soll.
  * @param old_ticks		Zeiger auf eine Variable, die einen Timestamp speichern kann
- * @param ms			Zeit in ms, die vergangen sein muss, damit True geliefert wird
- * @return				True oder False
+ * @param ms			Zeit in ms, die vergangen sein muss, damit true geliefert wird
+ * @return				true oder false
  */
 static inline uint8_t
 #ifndef DOXYGEN
@@ -234,9 +234,9 @@ timer_ms_passed_8(uint8_t *old_ticks, uint16_t ms)
 	uint8_t ticks = TIMER_GET_TICKCOUNT_8;
 	if ((uint8_t)(ticks - *old_ticks) > MS_TO_TICKS(ms)) {
 		*old_ticks = ticks;
-		return True;
+		return true;
 	}
-	return False;
+	return false;
 }
 
 /*!
@@ -244,8 +244,8 @@ timer_ms_passed_8(uint8_t *old_ticks, uint16_t ms)
  * Siehe auch timer_ms_passed_32()
  * 32-Bit Version, fuer Code, der (teilweise) seltener als alle 11 s aufgerufen wird.
  * @param old_ticks		Zeiger auf eine Variable, die einen Timestamp speichern kann
- * @param ms			Zeit in ms, die vergangen sein muss, damit True geliefert wird
- * @return				True oder False
+ * @param ms			Zeit in ms, die vergangen sein muss, damit true geliefert wird
+ * @return				true oder false
  */
 static inline uint8_t
 #ifndef DOXYGEN

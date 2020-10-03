@@ -19,7 +19,7 @@
  ****************************************************************************/
 
 /**
- * @file mbus.c
+ * @file mbus_proto.c
  *
  * @author Harald W. Leschner (DK6YF)
  * @date 23.08.2016
@@ -34,9 +34,6 @@
  * @see http://www.stack.nl/~dimitri/doxygen/commands.html
  */
 
-
-
-
 #include <inttypes.h>      	// common scalar types
 #include <avr/io.h>        	// for device register definitions
 #include <avr/interrupt.h> 	// for interrupt enable
@@ -44,6 +41,7 @@
 #include <avr/wdt.h>       	// for watchdog, used to prevent deadlocks in interrupts
 #include <avr/eeprom.h>    	// EEPROM access
 #include <string.h>    		// EEPROM access
+
 #include "mbus.h"         	// look for definitions here
 #include "uart.h"         	// my UART "driver"
 
@@ -51,98 +49,27 @@
 #include "hd44780.h"
 
 
+/* Global variables */
+mbus_rx_t rx_packet;		// global accessible received packet
+mbus_tx_t tx_packet;		// global accessible outgoing packet
 
-mbus_rx_t rx_packet;
-mbus_tx_t tx_packet;
+char mbus_outbuffer[MBUS_BUFFER];	// global codec buffer for the driver 
+char mbus_inbuffer[MBUS_BUFFER];	// stores incoming message
 
-char mbus_outbuffer[MBUS_BUFFER];
-
-uint8_t mbus_tobesend = 0;
-
-char mbus_inbuffer[MBUS_BUFFER];
-
-// received state
-mbus_data_t in_packet;
-
-// internal state
-mbus_data_t status_packet; 	// maintained packet
-
-command_t 	m_LastCmd; 	// last command from radio
-
-//uint8_t		echo_waitstate; 	// set if a response has been sent
-//char 		last_sent[100]; 	// our last sent packet, for echo check
+uint8_t mbus_tobesend = 0;			// current index of buffer (debugging?)
 
 
-enum
-{
-	quiet,			// do nothing
-	get_state, 		// issue play state
-	playing, 		// issue play state in regular intervals
-	resuming, 		// starting up
-	changing1,
-	changing2,
-	changing3,
-	changing4,
-} echostate; 		// what to do after own echo has been received
+//command_t m_LastCmd; 				// last command from radio
+//uint8_t	echo_waitstate; 		// set if a response has been sent
+//char		last_sent[100]; 		// our last sent packet, for echo check
 
 
-typedef struct
-{	// one entry in the coding table
-	command_t cmd;
-	char hexmask[32];
-	char infotext[32];
-} code_item_t;
-
-static const code_item_t alpine_codetable[] =
-{
-	{ rPing, 			"18", 				"Ping" },
-	{ cPingOK, 			"98", 				"Ping OK" },
-	{ cAck, 			"9F0000f", 			"Ack/Wait" }, 		// f0=0|1|6|7|9
-	{ rStatus, 			"19",				"Some info?" },
-	{ cPreparing,  		"991ttiimmssff0f", 	"Preparing" }, 		// f0=0:normal, f0=4:repeat one, f0=8:repeat all
-	{ cStopped,    		"992ttiimmssff0f", 	"Stopped" }, 			// f1=0:normal, f1=2:mix, f1=8:scan
-	{ cPaused,     		"993ttiimmssff0f", 	"Paused" }, 			// f3=1: play mode, f3=2:paused mode, f3=8: stopped
-	{ cPlaying,    		"994ttiimmssff0f", 	"Playing" },
-	{ cSpinup,     		"995ttiimmssff0f", 	"Spinup" },
-	{ cForwarding, 		"996ttiimmssff0f", 	"FF" },
-	{ cReversing,  		"997ttiimmssff0f", 	"FR" },
-	{ rPlay,    		"11101", 			"Play" },
-	{ rPause,   		"11102", 			"Pause" },
-	{ rStop,    		"11140", 			"Stop" },
-	{ rScnStop, 		"11150", 			"ScanStop" },
-	{ rPlayFF,  		"11105", 			"Play FF start" },
-	{ rPlayFR,  		"11109", 			"Play FR start" },
-	{ rPauseFF, 		"11106", 			"Pause FF start" },
-	{ rPauseFR, 		"1110A", 			"Pause FR start" },
-	{ rResume,  		"11181", 			"Play fr curr. pos." },
-	{ rResumeP, 		"11182", 			"Pause fr curr. pos." },
-//	{ rNextMix, 	"1130A314", 			"next random" },
-//	{ rPrevMix, 	"1130B314", 			"previous random" },
-	{ rSelect,  		"113dttff", 		"Select" }, 			// f0=1:playing, f0=2:paused, f1=4:random
-	{ rRepeatOff, 		"11400000", 		"Repeat Off" },
-	{ rRepeatOne, 		"11440000", 		"Repeat One" },
-	{ rRepeatAll, 		"11480000", 		"Repeat All" },
-	{ rScan,      		"11408000", 		"Scan" },
-	{ rMix,       		"11402000", 		"Mix" },
-	{ cPwrUp, 			"9A0000000000", 	"Some powerup?" },
-	{ cLastInfo,  		"9B0dttfff0f", 		"Last played" }, 	// f0=0:done, f0=1:busy, f0=8:eject, //f1=4: repeat1, f1=8:repeat all, f2=2:mix
-	{ cNoMagzn,   		"9BAd00f00ff", 		"No Magazin" },
-	{ cChanging,  		"9B9dttfff0f", 		"Changing" },
-	{ cChanging1, 		"9BDd00fff0f", 		"Changing Phase 1" },
-	{ cChanging2, 		"9BBd00fff0f", 		"Changing Phase 2" },
-	{ cChanging3, 		"9BCd00fff0f", 		"Changing Phase 3" },
-	{ cChanging4, 		"9B8d00fff0f", 		"Changing Phase 4" },
-	{ cStatus, 			"9Cd01ttmmssf", 	"Disk Status" },
-	{ cStat1, 			"9D000fffff", 		"Some status?" },
-	{ cStat2, 			"9E0000000", 		"Some more status?" },
-	// also seen:
-	// 11191
-};
-
-volatile uint16_t player_sec = 0;
 
 
-// a convenience feature to populate the timings in eeprom with reasonable defaults
+
+
+
+/* A convenience feature to populate the timings in eeprom with reasonable defaults */
 void init_eeprom (void)
 {
 	uint8_t i;
@@ -169,7 +96,7 @@ void init_eeprom (void)
 }
 
 
-// utility function: convert a number to a hex char
+/* Utility function: convert a number to a hex char */
 char int2hex(uint8_t n)
 {
 	if (n < 10)
@@ -181,7 +108,7 @@ char int2hex(uint8_t n)
 }
 
 
-// utility function: convert a hex char to a number
+/* Utility function: convert a hex char to a number */
 uint8_t hex2int(char c)
 {
 	if (c < '0')
@@ -201,7 +128,7 @@ uint8_t hex2int(char c)
 }
 
 
-// generate the checksum
+/* Generate the checksum */
 int8_t calc_checksum(char *buffer, uint8_t len)
 {
 	int8_t checksum = 0;
@@ -215,7 +142,7 @@ int8_t calc_checksum(char *buffer, uint8_t len)
 	return checksum;
 }
 
-
+/* Find key in buffer */
 uint8_t mbus_searchbuffer(uint8_t key)
 {
 	uint8_t i;
@@ -230,7 +157,9 @@ uint8_t mbus_searchbuffer(uint8_t key)
 }
 
 
-// helper function for main(): setup timers and pins
+/*
+ * Initialisation : Setup hardware timers, pins and buffers
+ */
 void init_mbus (void)
 {
 
@@ -245,8 +174,8 @@ void init_mbus (void)
 	//TCCR1B = _BV(ICNC1) | _BV(CS12); // noise filter, reset on match, prescale
 	TCCR1B =  (1 << ICES1) | (1 << ICNC1) | (1 << CS12) ; 	// capture on rising edge, noise filter
 
-	OCR1H = 0; 					// we use only the lower part, but have to write this first
-	OCR1L = BIT_TIMEOUT; 		// have to complete a bit within this time
+	OCR1AH = 0; 				// we use only the lower part, but have to write this first
+	OCR1AL = BIT_TIMEOUT; 		// have to complete a bit within this time
 
     // enable capture and compare match interrupt for timer 1
 	TIMSK |= (1 << TICIE1) | (1 << OCIE1A);
@@ -269,7 +198,7 @@ void init_mbus (void)
 
 	status_packet.source = eCD;
 	status_packet.chksum = -1;
-	status_packet.chksumOK = False;
+	status_packet.chksumOK = false;
 	status_packet.cmd = eInvalid;
 	status_packet.description = "";
 	status_packet.flagdigits = 0;
@@ -286,9 +215,21 @@ void init_mbus (void)
 
 
 
+/*
+d8888b. d88888b  .o88b. d88888b d888888b db    db d88888b d8888b. 
+88  `8D 88'     d8P  Y8 88'       `88'   88    88 88'     88  `8D 
+88oobY' 88ooooo 8P      88ooooo    88    Y8    8P 88ooooo 88oobY' 
+88`8b   88~~~~~ 8b      88~~~~~    88    `8b  d8' 88~~~~~ 88`8b   
+88 `88. 88.     Y8b  d8 88.       .88.    `8bd8'  88.     88 `88. 
+88   YD Y88888P  `Y88P' Y88888P Y888888P    YP    Y88888P 88   YD 
+*/
 
-
-// edge detection interrupt, the heart of receiving
+/*
+ * TIMER 1 Capture interrupt : Heart of receiving, measure the pulse-width / length of pulses
+ *
+ * - 16bit timer
+ * - Edge detection is done in hardware.
+ */
 ISR(TIMER1_CAPT_vect)
 {
 	char outchar = 0;
@@ -373,7 +314,10 @@ ISR(TIMER1_CAPT_vect)
 	}
 }
 
-// timeout interrupt, this terminates a received packet
+
+/*
+ * TIMER 1 Compare interrupt : Called in regular interval, this routine checks the completition of a received message, kind of timeout ...
+ */
 ISR(TIMER1_COMPA_vect)
 {
 
@@ -401,7 +345,7 @@ ISR(TIMER1_COMPA_vect)
 
 		rx_packet.num_nibbles = 0;
 
-		rx_packet.decode = True;
+		rx_packet.decode = true;
 
 	}
 #endif
@@ -412,7 +356,18 @@ ISR(TIMER1_COMPA_vect)
 
 
 
-// timer 0 overflow, used for sending
+/*
+d888888b d8888b.  .d8b.  d8b   db .d8888. .88b  d88. d888888b d888888b d888888b d88888b d8888b. 
+`~~88~~' 88  `8D d8' `8b 888o  88 88'  YP 88'YbdP`88   `88'   `~~88~~' `~~88~~' 88'     88  `8D 
+   88    88oobY' 88ooo88 88V8o 88 `8bo.   88  88  88    88       88       88    88ooooo 88oobY' 
+   88    88`8b   88~~~88 88 V8o88   `Y8b. 88  88  88    88       88       88    88~~~~~ 88`8b   
+   88    88 `88. 88   88 88  V888 db   8D 88  88  88   .88.      88       88    88.     88 `88. 
+   YP    88   YD YP   YP VP   V8P `8888Y' YP  YP  YP Y888888P    YP       YP    Y88888P 88   YD 
+*/
+
+/*
+ * TIMER 0 Overflow interrupt : Generates the pulse-width modulated signal on PIN_MBUS_OUT
+ */
 ISR(TIMER0_OVF_vect)
 {
 
@@ -499,7 +454,21 @@ ISR(TIMER0_OVF_vect)
 
 
 
-// use acRaw member to generate the others
+/*
+d8888b. d88888b  .o88b.  .d88b.  d8888b. d88888b d8888b. 
+88  `8D 88'     d8P  Y8 .8P  Y8. 88  `8D 88'     88  `8D 
+88   88 88ooooo 8P      88    88 88   88 88ooooo 88oobY' 
+88   88 88~~~~~ 8b      88    88 88   88 88~~~~~ 88`8b   
+88  .8D 88.     Y8b  d8 `8b  d8' 88  .8D 88.     88 `88. 
+Y8888D' Y88888P  `Y88P'  `Y88P'  Y8888D' Y88888P 88   YD 
+*/
+
+/*
+ * Decode incoming packet: Analyze the received message for known commands and parse the data
+ *
+ * packet_src is filled by receiving interrupt routine (see mbus_inbuffer[] and ISR(TIMER1_CAPT_vect) )
+ * mbuspacket contains the resulting decoded information
+ */
 uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 {
 	size_t len = strlen(packet_src);
@@ -508,7 +477,7 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 	// reset all the decoded information
 	mbuspacket->source = eUnknown;
 	mbuspacket->chksum = -1;
-	mbuspacket->chksumOK = False;
+	mbuspacket->chksumOK = false;
 	mbuspacket->cmd = eInvalid;
 	mbuspacket->description = "";
 	mbuspacket->flagdigits = 0;
@@ -519,6 +488,7 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 	mbuspacket->minutes = 0;
 	mbuspacket->seconds = 0;
 	mbuspacket->flags = 0;
+
 
 	if (len < 3)
 		return 0xFF;
@@ -617,7 +587,21 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 
 
 
-// compose packet_dest
+/*
+d88888b d8b   db  .o88b.  .d88b.  d8888b. d88888b d8888b. 
+88'     888o  88 d8P  Y8 .8P  Y8. 88  `8D 88'     88  `8D 
+88ooooo 88V8o 88 8P      88    88 88   88 88ooooo 88oobY' 
+88~~~~~ 88 V8o88 8b      88    88 88   88 88~~~~~ 88`8b   
+88.     88  V888 Y8b  d8 `8b  d8' 88  .8D 88.     88 `88. 
+Y88888P VP   V8P  `Y88P'  `Y88P'  Y8888D' Y88888P 88   YD 
+*/
+
+/*
+ * Compose outgoing packet: Depending on the command to be sent, all status information is inserted into the message using the template
+ *
+ * mbuspacket contains the status information to be sent
+ * packet_dest is the buffer to be filled with the encoded message
+ */
 uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest)
 {
 	uint8_t hr = 0;
@@ -687,292 +671,8 @@ uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest)
 	pkt_writeout[len+1] = '\r'; 			// string termination
 	pkt_writeout[len+2] = '\0'; 			// string termination
 
-	tx_packet.send = True;
+	tx_packet.send = true;
 
 	return hr;
 }
 
-
-
-
-
-// returns S_OK if an answer is desired (then no timer should be spawned)
-// or S_FALSE if not replying, in which case a timer may be spawned
-
-// string version of the received packed, for echo test
-// received packet in already decoded form
-// destination for the answer packet string
-// set to milliseconds units in wished to be called again
-
-uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall)
-{
-	uint8_t hr = 1; 		// default is do reply
-	mbus_data_t response;
-
-	memset(&response, 0, sizeof(response));
-
-	/* Ok an dieser Stelle klappt die ACK/Wait Verbindung, alles andere noch nicht hier... */
-
-
-	if (timercall) {
-		// evaluate state and send more or maybe spawn timer
-		switch (echostate) {
-
-		case get_state: // this state exists to send the first timestamp right away
-			echostate = (status_packet.cmd == cPlaying) ? playing : quiet;
-			response = status_packet;
-			break;
-
-		case playing:
-			response = status_packet;
-			if (status_packet.cmd == cPlaying) {
-				mbus_encode(&response, buffer);
-				return 1;
-				//status_packet.track = INT2BCD(BCD2INT(status_packet.track) + 1); // count
-				//if (status_packet.track > 0x99)
-				//	status_packet.track = 0;
-			}
-
-			else if (status_packet.cmd == cPaused) {
-				mbus_encode(&response, buffer);
-				return 1;
-			}
-
-			else
-				hr = 0;
-
-			break;
-
-
-		case resuming:
-			response.cmd = cStatus;
-			response.disk = status_packet.disk;
-			response.track = INT2BCD(99);
-			response.minutes = INT2BCD(99);
-			response.seconds = INT2BCD(99);
-			response.flags = 0xF;
-			echostate = get_state;
-			break;
-
-		case changing1: // debug short cut
-			response.cmd = cChanging;
-			response.disk = status_packet.disk;
-			response.track = status_packet.track;
-			response.flags = 0x0001; // done
-			echostate = get_state;
-			break;
-
-		default:
-			hr = 0; // send nothing
-
-		}
-	}
-
-#if 0
-	// check for echo
-	if (echo_waitstate && inpacket != NULL) {
-
-
-		// I should have received my own packet string back. If not, there might be a collision?
-		if (strcmp(last_sent, raw_received) == 0) {
-			// OK, we might send the next if desired
-			echo_waitstate = False;
-
-			uart_write((uint8_t *)"H", 1);
-
-
-			if (hr == 1) {
-				//*sched_timer = 0; // discipline myself: no timer if responding
-				mbus_encode(&response, buffer);
-				strcpy(last_sent, buffer); // remember for echo check
-				echo_waitstate = True;
-			}
-			return hr;
-
-		} else {	// what to do on collision? try sending again
-			strcpy(buffer, last_sent); // copy old to output
-			//return 1; // send again
-		}
-
-	}
-#endif
-
-
-#if 0
-	if (inpacket == NULL ) {	// response from timer, not by reception (could be a seperate function in future)
-
-		//uart_write((uint8_t *)"N", 1);
-
-		switch (echostate) {
-
-		case playing:
-			if (status_packet.cmd == cPlaying) {
-				status_packet.track = INT2BCD(BCD2INT(status_packet.track) + 1); // count
-				if (status_packet.track > 0x99)
-					status_packet.track = 0;
-			}
-			else
-				hr = 0;
-			break;
-
-		default:
-			hr = 0; // send nothing
-
-		}
-
-		if (hr == 1) {
-			//*sched_timer = 0; // discipline myself: no timer if responding
-			mbus_encode(&status_packet, buffer);
-			strcpy(last_sent, buffer); // remember for echo check
-			echo_waitstate = True;
-		}
-
-		return hr;
-	}
-#endif
-
-#if 1
-
-	// sanity checks and debug output
-	if (inpacket != NULL) {
-
-		if (!inpacket->chksumOK) {
-			//uart_write((uint8_t *)"c", 1);	// checksum error
-			return 0;
-		}
-
-
-		if (inpacket->source != eRadio) {
-			//uart_write((uint8_t *)"s", 1);	// destination error
-			return 0; // ignore for now
-		}
-
-	}
-
-#endif
-
-
-	// generate immediate response to radio command, want to see no timer spawn here
-
-
-	switch(inpacket->cmd) {
-
-	case rPing:
-		response.cmd = cPingOK;
-		break;
-
-	case rStatus:
-		response.cmd = cAck;
-		break;
-
-
-	case rPlay:
-		status_packet.cmd = cPlaying;
-		status_packet.flags &= ~0x00B;
-		status_packet.flags |=  0x001;
-		response = status_packet;
-		break;
-
-	case rPause:
-		status_packet.cmd = cPaused;
-		status_packet.flags &= ~0x00B;
-		status_packet.flags |=  0x002;
-		response = status_packet;
-		break;
-
-	case rScnStop:
-	case rStop:
-		status_packet.cmd = cStopped;
-		status_packet.flags |=  0x008;
-		response = status_packet;
-		break;
-
-	case rPlayFF:
-		status_packet.cmd = cForwarding;
-		response = status_packet;
-		break;
-
-	case rPlayFR:
-		status_packet.cmd = cReversing;
-		response = status_packet;
-		break;
-
-	case rRepeatOff:
-		status_packet.flags &= ~0xCA0;
-		response = status_packet;
-		break;
-
-	case rRepeatOne:
-		status_packet.flags &= ~0xCA0;
-		status_packet.flags |=  0x400;
-		response = status_packet;
-		break;
-
-	case rRepeatAll:
-		status_packet.flags &= ~0xCA0;
-		status_packet.flags |=  0x800;
-		response = status_packet;
-		break;
-
-	case rScan:
-		status_packet.flags &= ~0xCA0;
-		status_packet.flags |=  0x080;
-		response = status_packet;
-		break;
-
-	case rMix:
-		status_packet.flags &= ~0xCA0;
-		status_packet.flags |=  0x020;
-		response = status_packet;
-		break;
-
-	case rSelect:
-		response.cmd = cChanging;
-		if (inpacket->disk != 0 && inpacket->disk != status_packet.disk) {
-			echostate = changing1;
-			response.disk = status_packet.disk = inpacket->disk;
-			//status_packet.disk = 9; // test hack!!
-			response.track = status_packet.track = 1;
-			response.flags = 0x1001; // busy
-		} else {
-			// zero indicates same disk
-			echostate = get_state;
-			status_packet.minutes = 0;
-			status_packet.seconds = 0;
-			response.disk = status_packet.disk;
-			response.track = status_packet.track = inpacket->track;
-			response.flags = 0x0001; // done
-		}
-		player_sec = 0; // restart timer
-		break;
-
-	case rResume:
-	case rResumeP:
-		echostate = resuming;
-		status_packet.cmd = (inpacket->cmd == rResume) ? cPlaying : cPaused;
-		response.cmd = cChanging;
-		response.disk = status_packet.disk;
-		response.track = status_packet.track;
-		response.flags = 0x0001; // done
-		break;
-
-
-
-	default:
-		response.cmd = cAck;
-		//response.cmd = eInvalid;
-		//response.cmd = cPingOK;
-
-	} // switch(inpacket->cmd)
-
-
-	if (response.cmd != eInvalid) {
-		//*sched_timer = 0; // discipline myself: no timer if responding
-		mbus_encode(&response, buffer);
-		//strcpy(last_sent, buffer); // remember for echo check
-		return 1;
-	}
-
-
-	return 0;
-}
