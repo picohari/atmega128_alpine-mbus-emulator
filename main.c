@@ -50,7 +50,7 @@
 #include "fifo.h"
 #include "uart.h"
 #include "log.h"
-#include "display.h"
+#include "hd44780.h"
 
 #include "mbus.h"
 
@@ -87,11 +87,10 @@ static void init (void) {
 		uart_init();
 	#endif
 
-	#ifdef DISPLAY_AVAILABLE
-		display_init();
-		display_clear();
-		display_cursor(0, 0);
-		//display_printf("Hello world!");
+	#ifdef HD44780_AVAILABLE
+		hd44780_init();
+		hd44780_clear();
+		hd44780_cursor(0, 0);
 	#endif
 
     LOG_INFO("M-BUS Adapter 1.0\n");
@@ -105,7 +104,7 @@ int main (void) {
 
     init_mbus();
 
-    // setup the states, only the necessary
+    /* setup the states, only the necessary */
     rx_packet.state = wait;
     tx_packet.num_bits = 0;
 
@@ -118,7 +117,7 @@ int main (void) {
         static uint32_t player_ticks = 0;
         static uint32_t sending_ticks = 0;
 
-        // normal CD play action updates only every second
+        /* normal CD play action updates only every second */
         if (timer_ms_passed(&player_ticks, 1000)) {
 
             if (status_packet.cmd == cPlaying)
@@ -128,17 +127,33 @@ int main (void) {
                 player_sec = 0;
         }
 
-        // update status packet information about playing time
-        status_packet.minutes = player_sec / 60;
-        status_packet.seconds = player_sec % 60;
+        /* update status packet information about playing time */
+        status_packet.minutes = INT2BCD(player_sec / 60);
+        status_packet.seconds = INT2BCD(player_sec % 60);
 
-        // send every 500ms a new status packet to the head-unit
+        /* send every 500ms a new status packet to the head-unit */
         if (timer_ms_passed(&sending_ticks, 500)) {
 
-            if (status_packet.cmd == cPlaying )
-                mbus_process(&in_packet, mbus_outbuffer, True);
-        }
+            if (status_packet.cmd == cPlaying ) {
 
+                /* Show info about selected repeat mode */
+                #ifdef HD44780_AVAILABLE
+                    hd44780_cursor(1, 16);
+                    if (status_packet.flags & 0x400)
+                        hd44780_printf("R-ONE");
+                    if (status_packet.flags & 0x800)
+                        hd44780_printf("R-ALL");
+                    if (status_packet.flags & 0x080)
+                        hd44780_printf("SCAN ");
+                    if (status_packet.flags & 0x020)
+                        hd44780_printf(" MIX ");
+                    else
+                        hd44780_printf("     ");
+                #endif
+
+                mbus_process(&in_packet, mbus_outbuffer, True);
+            }
+        }
 
 
         /* check if there is a command to be decoded */
@@ -151,32 +166,21 @@ int main (void) {
 
             rx_packet.decode = False;
 
-            // show the actual decoded command
-            display_cursor(1, 1);
-            display_printf("                    ");
-            display_cursor(1, 1);
-            display_printf("%s", in_packet.description);
+            /* show the actual decoded command on LCD */
+            #ifdef HD44780_AVAILABLE
+                hd44780_cursor(4, 1);
+                hd44780_printf("                    ");
+                hd44780_cursor(4, 1);
+                hd44780_printf("%s", in_packet.description);
+            #endif
         }
 
-        // show info about disk, track and playing status
-        display_cursor(4, 1);
-        display_printf("D:%d T:%02d %02d:%02d", status_packet.disk, BCD2INT(status_packet.track), status_packet.minutes, status_packet.seconds);
 
-        // 12345678901234567890
-        // D:1 T:01 00:00 R-ALL // R-ONE // SCAN_ // MIX__
-
-        // show info about selected repeat mode
-        display_cursor(4, 16);
-        if (status_packet.flags && 0x400)
-            display_printf("R-ONE");
-        else if (status_packet.flags && 0x800)
-            display_printf("R-ALL");
-        else if (status_packet.flags && 0x080)
-            display_printf("SCAN ");
-        else if (status_packet.flags && 0x020)
-            display_printf(" MIX ");
-        else
-            display_printf("     ");
+         /* Show info about disk, track and playing status */
+        #ifdef HD44780_AVAILABLE
+            hd44780_cursor(1, 1);
+            hd44780_printf("D:%d T:%02d %02d:%02d", status_packet.disk, status_packet.track, player_sec / 60, player_sec % 60);
+        #endif
 
 
         /* check if there is a command to be sent */

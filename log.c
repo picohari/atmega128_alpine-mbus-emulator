@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "log.h"
-#include "display.h"
+#include "hd44780.h"
 #include "uart.h"
 
 

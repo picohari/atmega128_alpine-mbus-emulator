@@ -19,7 +19,7 @@
  ****************************************************************************/
 
 /**
- * @file display.h
+ * @file hd44780.h
  *
  * @author Harald W. Leschner (DK6YF)
  * @date 23.08.2016
@@ -34,44 +34,43 @@
  * @see http://www.stack.nl/~dimitri/doxygen/commands.html
  */
 
-
-
-
-#ifndef DISPLAY_H_
-#define DISPLAY_H_
+#ifndef HD44780_H_
+#define HD44780_H_
 
 #include <avr/pgmspace.h>
 
-#define DISPLAY_LENGTH	20	/*!< How many characters in one row? */
+#define HD44780_LENGTH				20	/*!< How many characters in one row? */
 
-#define DISPLAY_SCREEN_TOGGLE	42	/*!< Screen number used for toggling */
-uint8 display_screen;				/*!< Currently active screen */
+#define HD44780_SCREEN_TOGGLE		42	/*!< Screen number used for toggling */
+ 
+uint8 hd44780_screen;					/*!< Currently active screen */
+
 
 /*! Buffersize for one row in the display in bytes */
-#define DISPLAY_BUFFER_SIZE	(DISPLAY_LENGTH + 1)
+#define HD44780_BUFFER_SIZE	(HD44780_LENGTH + 1)
 
 /*!
  * @brief	Initializes the display
  */
-void display_init(void);			// Initial Character LCD(4-Bit Interface)
+void hd44780_init(void);			// Initial Character LCD(4-Bit Interface)
 
 
-void display_cmd(unsigned char i);
+void hd44780_cmd(unsigned char i);
 
 
-void display_data(unsigned char i);
+void hd44780_data(unsigned char i);
 
 /*!
  * @brief			Position of the cursor
  * @param row		Row
  * @param column	Column
  */
-void display_cursor(uint8_t row, uint8_t column);		// Set Cursor LCD
+void hd44780_cursor(uint8_t row, uint8_t column);		// Set Cursor LCD
 
 /*!
  * @brief	Delete the whole display
  */
-void display_clear(void);
+void hd44780_clear(void);
 
 /*!
  * @brief			Writes a string from the FLASH to the display.
@@ -79,9 +78,9 @@ void display_clear(void);
  * @param ... 		Variable Argumentlist, like printf
  * @return			Number of characters written
  */
-uint8_t display_flash_printf(const char *format, ...);
+uint8_t hd44780_flash_printf(const char *format, ...);
 
-#define display_printf(format, args...)	display_flash_printf(PSTR(format), ## args)
+#define hd44780_printf(format, args...)	hd44780_flash_printf(PSTR(format), ## args)
 
 
-#endif /*DISPLAY_H_*/
+#endif /*HD44780_H_*/

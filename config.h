@@ -52,7 +52,7 @@
 *******************************************************************/
 /*!< BASIC TIMING AND COMMUNICATION */
 #define TIME_AVAILABLE			/*!< Is there a system time in s and ms? */
-#define DISPLAY_AVAILABLE		/*!< Display for local control and debugging */
+#define HD44780_AVAILABLE		/*!< Display for local control and debugging */
 //#define WELCOME_AVAILABLE		/*!< Show company welcome message */	
 #define UART_AVAILABLE			/*!< Serial Communication */
 

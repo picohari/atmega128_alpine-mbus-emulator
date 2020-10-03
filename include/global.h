@@ -68,11 +68,8 @@
 
 #define binary(var, bit) ((var >> bit) & 1)	/**< gibt das Bit "bit" von "var" zurueck */
 
-#ifdef WIN32
 #define LINE_FEED "\r\n"	/**< Linefeed fuer Windows */
-#else
-#define LINE_FEED "\n"		/**< Linefeed fuer nicht Windows */
-#endif
+//#define LINE_FEED "\n"		/**< Linefeed fuer nicht Windows */
 
 
 //#include "builtins.h"
