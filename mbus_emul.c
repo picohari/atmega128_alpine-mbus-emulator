@@ -54,23 +54,24 @@
 
 mbus_data_t status_packet;			// player state   - decoded outgoing packet : represents current player information
 
-mbus_data_t in_packet;				// received state - decoded incoming packet : represents remote head-unit
+mbus_data_t in_packet;				// received state - decoded incoming packet : may be from radio or echo of our own
 
-mbus_data_t response_packet;
+mbus_data_t response_packet;		// message state - to be sent to the head unit as response to another command
 
 uint16_t player_sec = 0;
 
 
 
-/* Aktueller Status */
+/* Current command to be evaluated */
 command_t cur_cmd = eInvalid;
 
-/* Letzter erhaltene Return-Code */
+/* Last reveived return code */
 enum ret_codes rc;
 
-/* Aktueller Funktions-Pointer zu aktuellem Zustand */
+/* Current function pointer for command execution */
 int (*cmd_funct)(void);
 
+/* Last received command from radio head unit NOT our own! */
 command_t	last_radiocmd;
 
 
@@ -528,34 +529,31 @@ struct transition state_transitions[] = {
 /* fetch new destination state depending on return code of current state */
 static command_t lookup_transitions(command_t current, enum ret_codes ret)
 {
-    int i = 0;
+	int i = 0;
 
-    command_t temp = eInvalid;
+	command_t temp = eInvalid;
 
-    for (i = 0;; ++i) {
+	for (i = 0;; ++i) {
 
-      if (state_transitions[i].src_state == current && state_transitions[i].ret_code == ret) {
+		if (state_transitions[i].src_state == current && state_transitions[i].ret_code == ret) {
+			temp = state_transitions[i].dst_state;
+			break;
+		}
 
-        temp = state_transitions[i].dst_state;
+		if (state_transitions[i].src_state == eInvalid) {
+			temp = eInvalid;
+			ret = ok;
+			break;
+		}
+	}
 
-        break;
-      }
-
-      if (state_transitions[i].src_state == eInvalid) {
-      	temp = eInvalid;
-      	ret = ok;
-      	break;
-      }
-    }
-
-    return temp;
+	return temp;
 }
 
 
 /* Main motor control routine */
 void mbus_control (const mbus_data_t *inpacket)
 {
-
 	/* Determine current command of incoming packet */
 	cur_cmd = inpacket->cmd;
 
@@ -585,5 +583,4 @@ void mbus_control (const mbus_data_t *inpacket)
     }
 
     cur_cmd = lookup_transitions(cur_cmd, rc);
-
 }

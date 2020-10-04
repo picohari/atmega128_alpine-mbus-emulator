@@ -174,7 +174,7 @@ void mbus_receive_wait(void)
 } 
 
 
-void mbus_receive(void)
+uint8_t mbus_receive(void)
 {
     /* check if there is a command to be decoded */
     if (rx_packet.decode) {
@@ -185,8 +185,11 @@ void mbus_receive(void)
         mbus_control(&in_packet);
 
         rx_packet.decode = false;
+
+        return true;
     }
 
+    return false;
 }
 
 
@@ -250,7 +253,7 @@ void mbus_init(void)
 	rx_packet.num_nibbles = 0;
 
   	/* Changer simulator setup */
-  	echostate = quiet;
+  	//echostate = quiet;
 
 	status_packet.source = eCD;
 	status_packet.chksum = -1;

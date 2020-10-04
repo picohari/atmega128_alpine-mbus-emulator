@@ -247,6 +247,7 @@ typedef struct {
 } mbus_data_t;
 
 
+#if 0
 /* What to do after own echo has been received */
 enum
 {
@@ -259,7 +260,7 @@ enum
 	changing3,
 	changing4,
 } echostate; 		// what to do after own echo has been received
-
+#endif
 
 /* possible return codes from states */ 
 enum ret_codes { 
@@ -379,6 +380,6 @@ uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercal
 void mbus_control (const mbus_data_t *inpacket);
 
 void mbus_send(void);
-void mbus_receive(void);
+uint8_t mbus_receive(void);
 
 #endif
