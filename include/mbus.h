@@ -355,7 +355,9 @@ extern char mbus_outbuffer[MBUS_BUFFER];
 extern char mbus_inbuffer[MBUS_BUFFER];
 
 extern uint16_t player_sec;
+
 extern command_t last_radiocmd;
+extern command_t last_cdcmd;
 
 
 // prototypes

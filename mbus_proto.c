@@ -152,27 +152,6 @@ uint8_t mbus_searchbuffer(uint8_t key)
 
 
 
-void mbus_receive_wait(void)
-{
-	while (true) {
-	    /* check if there is a command to be sent */
-	    if (!(TIMSK & _BV(TOIE0))                       // not already sending
-	        && rx_packet.state == wait                  // not receiving
-	        && ( /*new_uart ||*/ tx_packet.send )       // have something to send
-	        ) {
-
-	        // start sending the transmission
-	        tx_packet.state = start;
-	        TCCR0 = ((1 << CS01) | (1 << CS02));   // slow prescaling while sending
-	        TCNT0 = 0;                              // reset timer because ISR only offsets to it
-	        TIMSK |= _BV(TOIE0);                    // start the output handler with timer0
-
-	        tx_packet.send = false;
-	    }
-
-	}
-} 
-
 
 uint8_t mbus_receive(void)
 {
@@ -187,9 +166,8 @@ uint8_t mbus_receive(void)
         rx_packet.decode = false;
 
         return true;
-    }
-
-    return false;
+    } else
+        return false;
 }
 
 
@@ -208,6 +186,7 @@ void mbus_send(void)
         TIMSK |= _BV(TOIE0);                    // start the output handler with timer0
 
         tx_packet.send = false;
+        last_cdcmd = response_packet.cmd;
     }
 } 
 

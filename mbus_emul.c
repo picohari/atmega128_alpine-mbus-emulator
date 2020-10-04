@@ -71,8 +71,9 @@ enum ret_codes rc;
 /* Current function pointer for command execution */
 int (*cmd_funct)(void);
 
-/* Last received command from radio head unit NOT our own! */
+/* Last received command from radio head unit and our own! */
 command_t	last_radiocmd;
+command_t	last_cdcmd;
 
 
 
@@ -279,6 +280,7 @@ static int status_state(void)
 	response_packet.cmd = cAck;
     return reply;
 }
+
 
 
 /*  
@@ -503,6 +505,7 @@ int (*cmd_state[])(void) = {
 /* Transitions-Tabelle für jeden Zustand */
 struct transition state_transitions[] = {
 
+#if 0
     {rPing, 		reply,  	cPingOK},
     {rStatus, 		reply,  	cAck},
     
@@ -520,6 +523,7 @@ struct transition state_transitions[] = {
 
     {rSelect,		reply,		cAck},
     {cAck,			ok,			eInvalid},
+#endif
 
     {eInvalid, 		ok,     	eInvalid},
 	/* Transition für end wird nicht benötigt, da nie erreicht ... */
@@ -558,9 +562,8 @@ void mbus_control (const mbus_data_t *inpacket)
 	cur_cmd = inpacket->cmd;
 
 	/* Store last command coming from radio (used for ACK/WAIT) */
-	if (inpacket->source == eRadio) {
+	if (inpacket->source == eRadio)
 		last_radiocmd = cur_cmd;
-	}
 
 	/* Select function to handle the current command */
     cmd_funct = cmd_state[cur_cmd];
@@ -582,5 +585,5 @@ void mbus_control (const mbus_data_t *inpacket)
     	mbus_receive();
     }
 
-    cur_cmd = lookup_transitions(cur_cmd, rc);
+    //cur_cmd = lookup_transitions(cur_cmd, rc);
 }
