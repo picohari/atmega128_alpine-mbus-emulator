@@ -34,12 +34,8 @@
  * @see http://www.stack.nl/~dimitri/doxygen/commands.html
  */
 
-
-
-
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
-
 
 #include <stdint.h>
 #include <math.h>
@@ -94,10 +90,7 @@
 #define PACKED
 #endif
 
-
 #include <avr/pgmspace.h>
-
-
 
 /** Repraesentation eines Bits, dem ein Byte-Wert zugewiesen werden kann */
 typedef union {
@@ -109,12 +102,12 @@ typedef union {
 #define M_PI 3.14159265358979323846 /** pi */
 #endif
 #ifndef M_PI_2
-#define M_PI_2	(M_PI / 2.0) /**< pi / 2 */
+#define M_PI_2	(M_PI / 2.0) 		/**< pi / 2 */
 #endif
 
 // utility macros
-#define BCD2INT(n) (((n)/16) * 10 + ((n) % 16)) // for max. 2 digits
-#define INT2BCD(n) (((n)/10) * 16 + ((n) % 10)) // for max. 2 digits
-#define INT2HEX(n) (((n) < 10) ? '0' + (n) : 'A' - 10 + (n)) // single digit
+#define BCD2INT(n) (((n)/16) * 10 + ((n) % 16)) 				// for max. 2 digits
+#define INT2BCD(n) (((n)/10) * 16 + ((n) % 10)) 				// for max. 2 digits
+#define INT2HEX(n) (((n) < 10) ? '0' + (n) : 'A' - 10 + (n)) 	// single digit
 
 #endif // GLOBAL_H_

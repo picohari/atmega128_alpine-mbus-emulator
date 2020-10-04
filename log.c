@@ -31,11 +31,11 @@
 
 
 #ifdef LOG_AVAILABLE
-#ifndef USE_MINILOG
+
 
 #ifdef LOG_DISPLAY_AVAILABLE
 	/*! Groesse des Puffers fuer die Logausgaben bei Verwendung des LCD-Displays. */
-	#define LOG_BUFFER_SIZE		(DISPLAY_LENGTH + 1)
+	#define LOG_BUFFER_SIZE		(HD44780_LENGTH + 1)
 #else
 	/*! Groesse des Puffers fuer die Logausgaben ueber UART und ueber TCP/IP. */
 	#define LOG_BUFFER_SIZE		200
@@ -55,14 +55,6 @@ static const char warn_str[] PROGMEM = "- WARNING -";
 static const char error_str[] PROGMEM = "- ERROR -";
 static const char fatal_str[] PROGMEM = "- FATAL -";
 
-#if 0
-/*!
- * Liefert den Log-Typ als String (auf MCU als Flash-Referenz).
- * @param log_type Log-Typ
- * @return char*
- */
-static const char *log_get_type_str(LOG_TYPE log_type);
-#endif
 
 /*! Puffer fuer das Zusammenstellen einer Logausgabe */
 static char log_buffer[LOG_BUFFER_SIZE];
@@ -185,11 +177,6 @@ void log_end(void)
 		uart_write((uint8_t *)LINE_FEED,strlen(LINE_FEED));
 	#endif	/* LOG_UART_AVAILABLE */
 	
-	#ifdef LOG_CTSIM_AVAILABLE
-		/* Kommando an ct-Sim senden, ohne Line feed am Ende. */
-		command_write_data(CMD_LOG, SUB_CMD_NORM, NULL, NULL, log_buffer);
-	#endif	/* LOG_CTSIM_AVAILABLE */
-	
 	#ifdef LOG_DISPLAY_AVAILABLE
 		/* aktuelle Log-Zeile in Ausgabepuffer kopieren */
 		memcpy(screen_output[log_line - 1], log_buffer, strlen(log_buffer));
@@ -220,44 +207,12 @@ void log_end(void)
 		/* Strings aufs LCD-Display schreiben */
 		uint8_t i;
 		for (i = 0; i < 4; i++) {	// Das Display hat 4 Zeilen
-			display_cursor(i + 1, 1);
-			display_printf("%s", screen_output[i]);
+			hd44780_cursor(i + 1, 1);
+			hd44780_printf("%s", screen_output[i]);
 		}
 	}
 
 #endif	// LOG_DISPLAY_AVAILABLE
 
-#if 0
-/*!
- * Liefert einen Zeiger auf den Log-Typ als String.
- * @param log_type Log-Typ
- * @return char*
- */
-static const char *log_get_type_str(LOG_TYPE log_type)
-{
 
-	switch(log_type) {
-
-	case LOG_TYPE_DEBUG:
-		return debug_str;
-		
-	case LOG_TYPE_INFO:
-		return info_str;
-		
-	case LOG_TYPE_WARN:
-		return warn_str;
-		
-	case LOG_TYPE_ERROR:
-		return error_str;
-		
-	case LOG_TYPE_FATAL:
-		return fatal_str;
-	}
-
-	return debug_str;
-}
-#endif
-
-
-#endif	// USE_MINILOG
 #endif	/* LOG_AVAILABLE */

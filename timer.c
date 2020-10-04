@@ -33,9 +33,6 @@
  * @see http://www.stack.nl/~dimitri/doxygen/docblocks.html
  * @see http://www.stack.nl/~dimitri/doxygen/commands.html
  */
- 
-
-
 
 #include "config.h"
 
@@ -44,7 +41,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "timer.h"
-
 
 
 /*! Protect the time-sync */
@@ -116,9 +112,10 @@ void timer_2_init(void)
 
 	// If you change the Prescaler, adapt the formula for OCR2 !!! 
 	// Compare Register only 8-Bit  --> opt. prescaler change
-	TCCR2 |= (1 << WGM21) | (1 << CS21) | (1 << CS20); // CTC to OCR2; Prescaler to 64
-	OCR2 = ((XTAL / 64 / TIMER_2_CLOCK) - 1);	// Timer2A 16Mhz/64/5619= 44,49...
-	TIMSK  |= (1 << OCIE2);	// TIMER2 Output Compare Match A Interrupt ON
+	TCCR2 |= (1 << WGM21) | (1 << CS21) | (1 << CS20); 		// CTC to OCR2; Prescaler to 64
+	
+	OCR2 = ((XTAL / 64 / TIMER_2_CLOCK) - 1);				// Timer2A 16Mhz/64/5619= 44,49...
+	TIMSK  |= (1 << OCIE2);									// TIMER2 Output Compare Match A Interrupt ON
 
 	sei();                  // enable interrupts
 }

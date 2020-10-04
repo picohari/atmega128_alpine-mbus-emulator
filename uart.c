@@ -33,9 +33,6 @@
  * @see http://www.stack.nl/~dimitri/doxygen/docblocks.html
  * @see http://www.stack.nl/~dimitri/doxygen/commands.html
  */
-
-
-
  
 #include "config.h"
 

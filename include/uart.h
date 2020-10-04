@@ -34,9 +34,6 @@
  * @see http://www.stack.nl/~dimitri/doxygen/commands.html
  */
 
-
-
-
 #ifndef UART_H_
 #define UART_H_
 
@@ -65,10 +62,10 @@
 	#define UCSRB	UCSR0B
 	#define UCSRC	UCSR0C
 	#define UDR		UDR0
+//	#define UDRIE	UDRIE0
 //	#define RXEN	RXEN0
 //	#define TXEN	TXEN0
 //	#define RXCIE	RXCIE0
-//	#define UDRIE	UDRIE0
 //	#define UDRE0	UDRE0
 //	#define UCSZ0	UCSZ00
 //	#define UCSZ1	UCSZ01
@@ -104,7 +101,7 @@ extern void uart_init(void);
  * @brief	Wartet, bis die Uebertragung fertig ist.
  */
 static inline void uart_flush(void) {
-	while (UCSRB & (1 << UDRIE0));
+	while (UCSRB & (1 << UDRIE));
 }
 
 extern fifo_t infifo;	/*!< FIFO fuer Empfangspuffer */

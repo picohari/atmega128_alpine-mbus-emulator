@@ -93,7 +93,7 @@ static void init (void) {
 		hd44780_cursor(0, 0);
 	#endif
 
-    LOG_INFO("M-BUS Adapter 1.0\n");
+    LOG_INFO("M-BUS Adapter 1.2\n");
 }
 
 

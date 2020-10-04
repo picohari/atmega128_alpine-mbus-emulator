@@ -56,7 +56,6 @@
 #include <stdlib.h>
 
 
-#ifndef USE_MINILOG
 /*! Dieser Typ definiert die Typen der Log-Ausgaben. */
 typedef enum {
 	LOG_TYPE_DEBUG = 0,	/*!< Allgemeines Debugging */
@@ -145,55 +144,9 @@ void log_end(void);
 void log_display(void);
 #endif	// LOG_DISPLAY_AVAILABLE
 
-#else	// USE_MINILOG
-/*! Dieser Typ definiert die Typen der Log-Ausgaben. */
-typedef enum {
-	LOG_TYPE_DEBUG = 0,	/*!< Allgemeines Debugging */
-	LOG_TYPE_INFO,		/*!< Allgemeine Informationen */
-	LOG_TYPE_ERROR,		/*!< Fehler aufgetreten */
-} LOG_TYPE;
 
-#define LOG_WARN	LOG_INFO
-#define LOG_FATAL	LOG_ERROR
 
-/*!
- * Allgemeines Debugging
- */
-#define LOG_DEBUG(format, args...){	minilog_begin(__LINE__, LOG_TYPE_DEBUG); 	\
-									static const char __data[] PROGMEM = format;	\
-									minilog_printf(__data, ## args);				\
-}
 
-/*!
- * Info-Logging
- */
-#define LOG_INFO(format, args...){	minilog_begin(__LINE__, LOG_TYPE_INFO);		\
-									static const char __data[] PROGMEM = format;	\
-									minilog_printf(__data, ## args);				\
-}
-
-/*!
- * Fehler-Logging
- */
-#define LOG_ERROR(format, args...){	minilog_begin(__LINE__, LOG_TYPE_ERROR); 	\
-									static const char __data[] PROGMEM = format;	\
-									minilog_printf(__data, ## args);				\
-}
-
-/*!
- * Schreibt die Zeilennummer und den Log-Typ in den Puffer
- * @param line		Zeilennummer
- * @param log_type	Log-Typ {DEBUG, INFO, ERROR}
- */
-void minilog_begin(uint16_t line, LOG_TYPE log_type);
-
-/*!
- * Schreibt den Log-Text in den Log-Puffer und versendet die Daten
- * @param format	Format-String, wie bei printf
- * @param ... 		Variable Argumentenliste, wie beim printf
- */
-void minilog_printf(const char *format, ...);
-#endif	// USE_MINILOG
 #else	// LOG_AVAILABLE
 
 #define LOG_DEBUG(format, args...)

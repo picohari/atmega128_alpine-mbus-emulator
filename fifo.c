@@ -34,9 +34,6 @@
  * @see http://www.stack.nl/~dimitri/doxygen/commands.html
  */
 
-
-
-
 #include "fifo.h"
 
 /*!
