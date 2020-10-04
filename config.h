@@ -34,15 +34,17 @@
  * @see http://www.stack.nl/~dimitri/doxygen/commands.html
  */
 
-
-
-
 #ifndef CONFIGURE_H_
 #define CONFIGURE_H_
 
+/******************************************************************
+* CPU clock settings, timing parameters depends on these!
+*******************************************************************/
+/*!< Master CLOCK */
 #define F_CPU		16000000UL    	/*!< Crystal frequency in Hz */
 #define XTAL		F_CPU
 
+/*!< UART baudrate */
 #define BAUDRATE 	115200
 
 
@@ -52,35 +54,33 @@
 *******************************************************************/
 /*!< BASIC TIMING AND COMMUNICATION */
 #define TIME_AVAILABLE			/*!< Is there a system time in s and ms? */
-#define HD44780_AVAILABLE		/*!< Display for local control and debugging */
-//#define WELCOME_AVAILABLE		/*!< Show company welcome message */	
 #define UART_AVAILABLE			/*!< Serial Communication */
 
-/*!< LOGGING AUSGANG - nur 1 gleichzeitig moeglich */
-//#define LOG_CTSIM_AVAILABLE		/*!< Logging zum ct-Sim (PC und MCU) */
-//#define LOG_DISPLAY_AVAILABLE		/*!< Logging ueber das LCD-Display (PC und MCU) */
+/*!< LOGGING OUTPUT - nur 1 gleichzeitig moeglich */
 #define LOG_UART_AVAILABLE			/*!< Logging ueber UART (NUR fuer MCU) */
+//#define LOG_DISPLAY_AVAILABLE		/*!< Logging ueber das LCD-Display (PC und MCU) */
 //#define LOG_STDOUT_AVAILABLE 		/*!< Logging auf die Konsole (NUR fuer PC) */
-//#define USE_MINILOG				/*!< schaltet fuer MCU auf schlankes Logging um (nur in Verbindung mit Log2Sim) */
 
+/*!< MORE FEATURES */
+//#define WELCOME_AVAILABLE		/*!< Show company welcome message */	
 
+/*!< HARDWARE AVAILABLE */
+#define HD44780_AVAILABLE		/*!< HD44780 display for local control and debugging */
 
-//#define I2C_AVAILABLE				/*!< TWI-Schnittstelle (I2C) nutzen */
-//#define SPI_AVAILABLE				/*!< SPI Schnittstelle aktivieren? */
+//#define SSD1306_AVAILABLE		/*!< HD44780 display for local control and debugging */
+//#define SSD1306_SPI4_SUPPORT	/*!< SSD1306 display for local control and debugging */
+
 
 /************************************************************
 * Some Dependencies!!!
 ************************************************************/
 
-#ifndef DISPLAY_AVAILABLE
+#ifndef HD44780_AVAILABLE
 	#undef WELCOME_AVAILABLE
 #endif
 
 
 #ifdef LOG_UART_AVAILABLE
-	#define LOG_AVAILABLE	/*!< LOG aktiv? */
-#endif
-#ifdef LOG_CTSIM_AVAILABLE
 	#define LOG_AVAILABLE	/*!< LOG aktiv? */
 #endif
 #ifdef LOG_DISPLAY_AVAILABLE
@@ -92,37 +92,17 @@
 
 
 #ifdef LOG_AVAILABLE
-	#ifndef LOG_CTSIM_AVAILABLE
-		#undef USE_MINILOG
-	#endif
 
-
-	/* Mit Bot zu PC Kommunikation auf dem MCU gibts kein Logging ueber UART.
-	 * Ohne gibts keine Kommunikation ueber ct-Sim.
-	 */
 	#undef LOG_STDOUT_AVAILABLE		/*!< MCU hat kein STDOUT */
-	#ifdef BOT_2_PC_AVAILABLE
-		#undef LOG_UART_AVAILABLE
-	#else
-		#undef LOG_CTSIM_AVAILABLE
-	#endif
-
 
 	/* Ohne Display gibts auch keine Ausgaben auf diesem. */
-	#ifndef DISPLAY_AVAILABLE
+	#ifndef HD44780_AVAILABLE
 		#undef LOG_DISPLAY_AVAILABLE
 	#endif
 
 	/* Es kann immer nur ueber eine Schnittstelle geloggt werden. */
-
 	#ifdef LOG_UART_AVAILABLE
 		#define UART_AVAILABLE			/*!< UART vorhanden? */
-		#undef LOG_CTSIM_AVAILABLE
-		#undef LOG_DISPLAY_AVAILABLE
-		#undef LOG_STDOUT_AVAILABLE
-	#endif
-
-	#ifdef LOG_CTSIM_AVAILABLE
 		#undef LOG_DISPLAY_AVAILABLE
 		#undef LOG_STDOUT_AVAILABLE
 	#endif
@@ -131,13 +111,11 @@
 		#undef LOG_STDOUT_AVAILABLE
 	#endif
 
-	// Wenn keine sinnvolle Log-Option mehr uebrig, loggen wir auch nicht
-	#ifndef LOG_CTSIM_AVAILABLE
-		#ifndef LOG_DISPLAY_AVAILABLE
-			#ifndef LOG_UART_AVAILABLE
-				#ifndef LOG_STDOUT_AVAILABLE
-					#undef LOG_AVAILABLE
-				#endif
+	/* Wenn keine sinnvolle Log-Option mehr uebrig, loggen wir auch nicht */
+	#ifndef LOG_DISPLAY_AVAILABLE
+		#ifndef LOG_UART_AVAILABLE
+			#ifndef LOG_STDOUT_AVAILABLE
+				#undef LOG_AVAILABLE
 			#endif
 		#endif
 	#endif
@@ -145,10 +123,7 @@
 #endif
 
 
-
 #include "global.h"
-
-
 
 
 #endif /* CONFIGURE_H_ */
