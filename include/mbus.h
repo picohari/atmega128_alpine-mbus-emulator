@@ -178,7 +178,7 @@ typedef enum {
 
 /* M-BUS commands */
 typedef enum {
-	eInvalid = 0,
+	eInvalid,
 	// radio to changer
 	rPing,
 	rPlay,
@@ -261,6 +261,30 @@ enum
 } echostate; 		// what to do after own echo has been received
 
 
+/* possible return codes from states */ 
+enum ret_codes { 
+	ok,
+	reply, 
+	end, 
+	next, 
+	fail,
+	resume, 
+	play, 
+	stop, 
+	changing
+};
+
+/* used for transition table */
+struct transition {
+    command_t 		src_state;
+    enum ret_codes  ret_code;
+    command_t 		dst_state;
+};
+
+
+
+
+
 /* One entry in the coding table */
 typedef struct
 {	// one entry in the coding table
@@ -273,46 +297,47 @@ typedef struct
 /* Command code table */
 static const code_item_t alpine_codetable[] =
 {
-	{ rPing, 			"18", 				"Ping" },
-	{ cPingOK, 			"98", 				"Ping OK" },
-	{ cAck, 			"9F0000f", 			"Ack/Wait" }, 			// f0=0|1|6|7|9
-	{ rStatus, 			"19",				"Some info?" },
-	{ cPreparing,  		"991ttiimmssff0f", 	"Preparing" }, 			// f0=0:normal, f0=4:repeat one, f0=8:repeat all
-	{ cStopped,    		"992ttiimmssff0f", 	"Stopped" }, 			// f1=0:normal, f1=2:mix, f1=8:scan
-	{ cPaused,     		"993ttiimmssff0f", 	"Paused" }, 			// f3=1: play mode, f3=2:paused mode, f3=8: stopped
-	{ cPlaying,    		"994ttiimmssff0f", 	"Playing" },
-	{ cSpinup,     		"995ttiimmssff0f", 	"Spinup" },
-	{ cForwarding, 		"996ttiimmssff0f", 	"FF" },
-	{ cReversing,  		"997ttiimmssff0f", 	"FR" },
-	{ rPlay,    		"11101", 			"Play" },
-	{ rPause,   		"11102", 			"Pause" },
-	{ rStop,    		"11140", 			"Stop" },
-	{ rScnStop, 		"11150", 			"ScanStop" },
-	{ rPlayFF,  		"11105", 			"Play FF start" },
-	{ rPlayFR,  		"11109", 			"Play FR start" },
-	{ rPauseFF, 		"11106", 			"Pause FF start" },
-	{ rPauseFR, 		"1110A", 			"Pause FR start" },
-	{ rResume,  		"11181", 			"Play fr curr. pos." },
+	{ rPing, 			"18", 				"Ping               " },
+	{ cPingOK, 			"98", 				"Ping OK            " },
+	{ cAck, 			"9F0000f", 			"Ack/Wait           " }, 			// f0=0|1|6|7|9
+	{ rStatus, 			"19",				"Some info?         " },
+	{ cPreparing,  		"991ttiimmssff0f", 	"Preparing          " }, 			// f0=0:normal, f0=4:repeat one, f0=8:repeat all
+	{ cStopped,    		"992ttiimmssff0f", 	"Stopped            " }, 			// f1=0:normal, f1=2:mix, f1=8:scan
+	{ cPaused,     		"993ttiimmssff0f", 	"Paused             " }, 			// f3=1: play mode, f3=2:paused mode, f3=8: stopped
+	{ cPlaying,    		"994ttiimmssff0f", 	"Playing            " },
+	{ cSpinup,     		"995ttiimmssff0f", 	"Spinup             " },
+	{ cForwarding, 		"996ttiimmssff0f", 	"FF                 " },
+	{ cReversing,  		"997ttiimmssff0f", 	"FR                 " },
+	{ rPlay,    		"11101", 			"Play               " },
+	{ rPause,   		"11102", 			"Pause              " },
+	{ rStop,    		"11140", 			"Stop               " },
+	{ rScnStop, 		"11150", 			"Scan Stop          " },
+	{ rPlayFF,  		"11105", 			"Play FF start      " },
+	{ rPlayFR,  		"11109", 			"Play FR start      " },
+	{ rPauseFF, 		"11106", 			"Pause FF start     " },
+	{ rPauseFR, 		"1110A", 			"Pause FR start     " },
+	{ rResume,  		"11181", 			"Play fr curr. pos. " },
 	{ rResumeP, 		"11182", 			"Pause fr curr. pos." },
 //	{ rNextMix, 	"1130A314", 			"next random" },
 //	{ rPrevMix, 	"1130B314", 			"previous random" },
-	{ rSelect,  		"113dttff", 		"Select" }, 			// f0=1:playing, f0=2:paused, f1=4:random
-	{ rRepeatOff, 		"11400000", 		"Repeat Off" },
-	{ rRepeatOne, 		"11440000", 		"Repeat One" },
-	{ rRepeatAll, 		"11480000", 		"Repeat All" },
-	{ rScan,      		"11408000", 		"Scan" },
-	{ rMix,       		"11402000", 		"Mix" },
-	{ cPwrUp, 			"9A0000000000", 	"Some powerup?" },
-	{ cLastInfo,  		"9B0dttfff0f", 		"Last played" }, 		// f0=0:done, f0=1:busy, f0=8:eject, //f1=4: repeat1, f1=8:repeat all, f2=2:mix
-	{ cNoMagzn,   		"9BAd00f00ff", 		"No Magazin" },
-	{ cChanging,  		"9B9dttfff0f", 		"Changing" },
-	{ cChanging1, 		"9BDd00fff0f", 		"Changing Phase 1" },
-	{ cChanging2, 		"9BBd00fff0f", 		"Changing Phase 2" },
-	{ cChanging3, 		"9BCd00fff0f", 		"Changing Phase 3" },
-	{ cChanging4, 		"9B8d00fff0f", 		"Changing Phase 4" },
-	{ cStatus, 			"9Cd01ttmmssf", 	"Disk Status" },
-	{ cStat1, 			"9D000fffff", 		"Some status?" },
-	{ cStat2, 			"9E0000000", 		"Some more status?" },
+	{ rSelect,  		"113dttff", 		"Select             " }, 			// f0=1:playing, f0=2:paused, f1=4:random
+	{ rRepeatOff, 		"11400000", 		"Repeat Off         " },
+	{ rRepeatOne, 		"11440000", 		"Repeat One         " },
+	{ rRepeatAll, 		"11480000", 		"Repeat All         " },
+	{ rScan,      		"11408000", 		"Scan               " },
+	{ rMix,       		"11402000", 		"Mix                " },
+	{ cPwrUp, 			"9A0000000000", 	"Some powerup?      " },
+	{ cLastInfo,  		"9B0dttfff0f", 		"Last played        " }, 		// f0=0:done, f0=1:busy, f0=8:eject, //f1=4: repeat1, f1=8:repeat all, f2=2:mix
+	{ cNoMagzn,   		"9BAd00f00ff", 		"No Magazin         " },
+	{ cChanging,  		"9B9dttfff0f", 		"Changing           " },
+	{ cChanging1, 		"9BDd00fff0f", 		"Changing Phase 1   " },
+	{ cChanging2, 		"9BBd00fff0f", 		"Changing Phase 2   " },
+	{ cChanging3, 		"9BCd00fff0f", 		"Changing Phase 3   " },
+	{ cChanging4, 		"9B8d00fff0f", 		"Changing Phase 4   " },
+	{ cStatus, 			"9Cd01ttmmssf", 	"Disk Status        " },
+	{ cStat1, 			"9D000fffff", 		"Some status?       " },
+	{ cStat2, 			"9E0000000", 		"Some more status?  " },
+	{ eInvalid, 		"0", 				"Idle               " },
 	// also seen:
 	// 11191
 };
@@ -322,23 +347,27 @@ extern mbus_rx_t 	rx_packet;
 extern mbus_tx_t 	tx_packet;
 
 extern mbus_data_t in_packet;
+extern mbus_data_t response_packet;
 extern mbus_data_t status_packet;
 
 extern char mbus_outbuffer[MBUS_BUFFER];
 extern char mbus_inbuffer[MBUS_BUFFER];
 
 extern uint16_t player_sec;
-
+extern command_t last_radiocmd;
 
 
 // prototypes
-void init_mbus (void); 		// helper function for main(): setup timers and pins
-void init_eeprom (void); 	// a convenience feature to populate the timings in eeprom with reasonable defaults
-
 char int2hex(uint8_t n); 	// utility function: convert a number to a hex char
 uint8_t hex2int(char c); 	// utility function: convert a hex char to a number
-int8_t calc_checksum(char *buffer, uint8_t len);
 uint8_t mbus_searchbuffer(uint8_t key);
+
+int8_t calc_checksum(char *buffer, uint8_t len);
+
+
+void mbus_init (void); 		// helper function for main(): setup timers and pins
+
+void init_eeprom (void); 	// a convenience feature to populate the timings in eeprom with reasonable defaults
 
 
 uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest);
@@ -347,6 +376,9 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src);
 uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall);
 
 
+void mbus_control (const mbus_data_t *inpacket);
 
+void mbus_send(void);
+void mbus_receive(void);
 
 #endif

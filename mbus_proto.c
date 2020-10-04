@@ -59,14 +59,6 @@ char mbus_inbuffer[MBUS_BUFFER];	// stores incoming message
 uint8_t mbus_tobesend = 0;			// current index of buffer (debugging?)
 
 
-//command_t m_LastCmd; 				// last command from radio
-//uint8_t	echo_waitstate; 		// set if a response has been sent
-//char		last_sent[100]; 		// our last sent packet, for echo check
-
-
-
-
-
 
 
 /* A convenience feature to populate the timings in eeprom with reasonable defaults */
@@ -142,6 +134,7 @@ int8_t calc_checksum(char *buffer, uint8_t len)
 	return checksum;
 }
 
+
 /* Find key in buffer */
 uint8_t mbus_searchbuffer(uint8_t key)
 {
@@ -157,10 +150,73 @@ uint8_t mbus_searchbuffer(uint8_t key)
 }
 
 
+
+
+void mbus_receive_wait(void)
+{
+	while (true) {
+	    /* check if there is a command to be sent */
+	    if (!(TIMSK & _BV(TOIE0))                       // not already sending
+	        && rx_packet.state == wait                  // not receiving
+	        && ( /*new_uart ||*/ tx_packet.send )       // have something to send
+	        ) {
+
+	        // start sending the transmission
+	        tx_packet.state = start;
+	        TCCR0 = ((1 << CS01) | (1 << CS02));   // slow prescaling while sending
+	        TCNT0 = 0;                              // reset timer because ISR only offsets to it
+	        TIMSK |= _BV(TOIE0);                    // start the output handler with timer0
+
+	        tx_packet.send = false;
+	    }
+
+	}
+} 
+
+
+void mbus_receive(void)
+{
+    /* check if there is a command to be decoded */
+    if (rx_packet.decode) {
+
+        mbus_decode(&in_packet, mbus_inbuffer);
+        //mbus_process(&in_packet, mbus_outbuffer, false);
+
+        mbus_control(&in_packet);
+
+        rx_packet.decode = false;
+    }
+
+}
+
+
+void mbus_send(void)
+{
+    /* check if there is a command to be sent */
+    if (!(TIMSK & _BV(TOIE0))                   // not already sending
+        && (rx_packet.state == wait)            // not receiving
+        && ( /*new_uart ||*/ tx_packet.send)    // have something to send
+        ) {
+
+        // start sending the transmission
+        tx_packet.state = start;
+        TCCR0 = ((1 << CS01) | (1 << CS02));    // slow prescaling while sending
+        TCNT0 = 0;                              // reset timer because ISR only offsets to it
+        TIMSK |= _BV(TOIE0);                    // start the output handler with timer0
+
+        tx_packet.send = false;
+    }
+} 
+
+
+
+
+
+
 /*
  * Initialisation : Setup hardware timers, pins and buffers
  */
-void init_mbus (void)
+void mbus_init(void)
 {
 
 	// init virgin EEPROM with defaults, in timer ticks (34.722 us)
@@ -200,15 +256,18 @@ void init_mbus (void)
 	status_packet.chksum = -1;
 	status_packet.chksumOK = false;
 	status_packet.cmd = eInvalid;
-	status_packet.description = "";
+	status_packet.description = "Init";
 	status_packet.flagdigits = 0;
 	status_packet.validcontent = 0;
 	status_packet.disk = 1;
 	status_packet.track = 1;
-	status_packet.index = 0;
+	status_packet.index = 1;
 	status_packet.minutes = 0;
 	status_packet.seconds = 0;
 	status_packet.flags = 0;
+
+	in_packet.cmd = eInvalid;
+	in_packet.description = "Idle";
 }
 
 

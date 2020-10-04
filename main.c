@@ -102,7 +102,7 @@ int main (void) {
 	/* Initiate all */
 	init();
 
-    init_mbus();
+    mbus_init();
 
     /* setup the states, only the necessary */
     rx_packet.state = wait;
@@ -113,11 +113,8 @@ int main (void) {
 
     for (;;) {
 
-        /* Perform some player timings and simulations */
-        static uint32_t player_ticks = 0;
-        static uint32_t sending_ticks = 0;
-
         /* normal CD play action updates only every second */
+        static uint32_t player_ticks = 0;
         if (timer_ms_passed(&player_ticks, 1000)) {
 
             if (status_packet.cmd == cPlaying)
@@ -131,37 +128,28 @@ int main (void) {
         status_packet.minutes = INT2BCD(player_sec / 60);
         status_packet.seconds = INT2BCD(player_sec % 60);
 
+#if 1
         /* send every 500ms a new status packet to the head-unit */
+        static uint32_t sending_ticks = 0;
         if (timer_ms_passed(&sending_ticks, 500)) {
 
             if (status_packet.cmd == cPlaying ) {
-                mbus_process(&in_packet, mbus_outbuffer, true);
+                //mbus_process(&in_packet, mbus_outbuffer, true); 
+                mbus_encode(&response_packet, mbus_outbuffer);
             }
         }
+#endif
 
+        mbus_receive();
 
-        /* check if there is a command to be decoded */
-        if (rx_packet.decode) {
-
-            mbus_decode(&in_packet, mbus_inbuffer);
-
-            mbus_process(&in_packet, mbus_outbuffer, false);
-
-            rx_packet.decode = false;
-        }
+        mbus_send();
 
 
          /* Show info about disk, track and playing status */
         #ifdef HD44780_AVAILABLE
             hd44780_cursor(1, 1);
-            hd44780_printf("D:%d T:%02d %02d:%02d", status_packet.disk, status_packet.track, player_sec / 60, player_sec % 60);
+            hd44780_printf("D:%d T:%02d %02d:%02d", status_packet.disk, BCD2INT(status_packet.track), player_sec / 60, player_sec % 60);
         
-            /* show the actual decoded command on LCD */
-            hd44780_cursor(4, 1);
-            hd44780_printf("                    ");
-            hd44780_cursor(4, 1);
-            hd44780_printf("%s", in_packet.description);
-
             /* Show info about selected repeat mode */
             hd44780_cursor(1, 16);
             if (status_packet.flags & 0x020)
@@ -175,24 +163,34 @@ int main (void) {
             else
                 hd44780_printf("     ");
 
+            /* show the actual decoded command on LCD */
+            hd44780_cursor(4, 1);
+            hd44780_printf("%s", in_packet.description);
+            
+            #if 0
+            hd44780_cursor(2,  1); (status_packet.flags & 0x8000) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2,  2); (status_packet.flags & 0x4000) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2,  3); (status_packet.flags & 0x2000) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2,  4); (status_packet.flags & 0x1000) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2,  5); (status_packet.flags & 0x0800) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2,  6); (status_packet.flags & 0x0400) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2,  7); (status_packet.flags & 0x0200) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2,  8); (status_packet.flags & 0x0100) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2,  9); (status_packet.flags & 0x0080) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2, 10); (status_packet.flags & 0x0040) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2, 11); (status_packet.flags & 0x0020) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2, 12); (status_packet.flags & 0x8010) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2, 13); (status_packet.flags & 0x0008) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2, 14); (status_packet.flags & 0x0004) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2, 15); (status_packet.flags & 0x0002) ? hd44780_data('1') : hd44780_data('0');
+            hd44780_cursor(2, 16); (status_packet.flags & 0x0001) ? hd44780_data('1') : hd44780_data('0');
+            
+            hd44780_cursor(3, 1);
+            hd44780_printf("%03d", last_radiocmd);
+            #endif
+
+
         #endif
-
-
-        /* check if there is a command to be sent */
-        if (!(TIMSK & _BV(TOIE0))                       // not already sending
-            && rx_packet.state == wait                  // not receiving
-            && ( /*new_uart ||*/ tx_packet.send )       // have something to send
-            ) {
-
-            // start sending the transmission
-            tx_packet.state = start;
-            TCCR0  = ((1 << CS01) | (1 << CS02));   // slow prescaling while sending
-            TCNT0 = 0;                              // reset timer because ISR only offsets to it
-            TIMSK |= _BV(TOIE0);                    // start the output handler with timer0
-
-            tx_packet.send = false;
-        }
-
 
 	} /* End for (;;) */
 
