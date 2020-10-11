@@ -134,6 +134,32 @@
 #define F_SECOND 0x00000010
 #define F_FLAGS  0x00000020
 
+/* bitflags for command state - Set play state (111xx) */
+#define C_PLAY    0x00000001
+#define C_PAUSE   0x00000002
+#define C_PLAYFF  0x00000004
+#define C_PLAYFR  0x00000008
+#define C_SCNSTOP 0x00000010
+#define C_UNUSED  0x00000020
+#define C_STOP    0x00000040
+#define C_RESUME  0x00000080
+
+/* bitflags for play state - Set play state (99x...) */
+#define P_PLAY      0x00000001
+#define P_PAUSE     0x00000002
+#define P_UNUSED    0x00000004
+#define P_STOP      0x00000008
+#define P_RANDOM    0x00000200
+#define P_INTROSCN  0x00000800
+#define P_REPEATONE 0x00004000
+#define P_REPEATALL 0x00008000
+
+/* bitflags for set program mode (Repeat and Mix) */
+#define R_RANDOM     0x00000001
+#define R_INTROSCN   0x00000002
+#define R_REPEATONE  0x00000004
+#define R_REPEATALL  0x00000008
+
 
 
 /* M-BUS receiver module */
@@ -247,20 +273,6 @@ typedef struct {
 } mbus_data_t;
 
 
-#if 0
-/* What to do after own echo has been received */
-enum
-{
-	quiet,			// do nothing
-	get_state, 		// issue play state
-	playing, 		// issue play state in regular intervals
-	resuming, 		// starting up
-	changing1,
-	changing2,
-	changing3,
-	changing4,
-} echostate; 		// what to do after own echo has been received
-#endif
 
 /* possible return codes from states */ 
 enum ret_codes { 
@@ -275,15 +287,13 @@ enum ret_codes {
 	changing
 };
 
+
 /* used for transition table */
 struct transition {
     command_t 		src_state;
     enum ret_codes  ret_code;
     command_t 		dst_state;
 };
-
-
-
 
 
 /* One entry in the coding table */
@@ -376,12 +386,14 @@ void init_eeprom (void); 	// a convenience feature to populate the timings in ee
 uint8_t mbus_encode(mbus_data_t *mbuspacket, char *packet_dest);
 uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src);
 
-uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall);
+//uint8_t mbus_process(const mbus_data_t *inpacket, char *buffer, uint8_t timercall);
 
 
 void mbus_control (const mbus_data_t *inpacket);
 
 void mbus_send(void);
+void mbus_send_wait(void);
+
 uint8_t mbus_receive(void);
 
 #endif

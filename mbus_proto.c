@@ -159,7 +159,6 @@ uint8_t mbus_receive(void)
     if (rx_packet.decode) {
 
         mbus_decode(&in_packet, mbus_inbuffer);
-        //mbus_process(&in_packet, mbus_outbuffer, false);
 
         mbus_control(&in_packet);
 
@@ -191,7 +190,30 @@ void mbus_send(void)
 } 
 
 
+void mbus_send_wait(void)
+{
+	/* Wait for preceing transmission to be sent or received */
+	while(TIMSK & _BV(TOIE0) || (rx_packet.state != wait)) {
+		asm("nop");
+	}
 
+    /* check if there is a command to be sent */
+    if (	//!(TIMSK & _BV(TOIE0))                   // not already sending
+        	//&& (rx_packet.state == wait)            // not receiving
+        	//&& (tx_packet.send)    					// have something to send
+        (tx_packet.send)    					// have something to send
+        ) {
+
+        // start sending the transmission
+        tx_packet.state = start;
+        TCCR0 = ((1 << CS01) | (1 << CS02));    // slow prescaling while sending
+        TCNT0 = 0;                              // reset timer because ISR only offsets to it
+        TIMSK |= _BV(TOIE0);                    // start the output handler with timer0
+
+        tx_packet.send = false;
+        last_cdcmd = response_packet.cmd;
+    }
+} 
 
 
 
@@ -283,6 +305,7 @@ ISR(TIMER1_CAPT_vect)
 		rx_packet.num_bits = 0;
 		//TIMSK |= (1 << OCIE1A);		// Enable overflow/compare
 		// no break, fall through
+		uart_write((uint8_t *)">", 1);
 
 	case low: // high phase between bits has ended, start of low pulse
 		// could check the remain high time to verify bit, but won't work for the last (timed out)
@@ -605,7 +628,7 @@ uint8_t mbus_decode(mbus_data_t *mbuspacket, char *packet_src)
 
 			if (mbuspacket->chksumOK) {
 
-				if (mbuspacket->source == eRadio)
+				if (mbuspacket->source == eRadio) 
 					uart_write((uint8_t *)"R", 1);
 				else if (mbuspacket->source == eCD)
 					uart_write((uint8_t *)"C", 1);

@@ -45,6 +45,8 @@
 #include <avr/eeprom.h>    	// EEPROM access
 #include <string.h>    		// EEPROM access
 
+#include <util/delay.h>
+
 #include "mbus.h"         	// look for definitions here
 #include "uart.h"         	// my UART "driver"
 
@@ -77,6 +79,20 @@ command_t	last_cdcmd;
 
 
 
+/*
+ ____           _ _       
+|  _ \ __ _  __| (_) ___  
+| |_) / _` |/ _` | |/ _ \ 
+|  _ < (_| | (_| | | (_) |
+|_| \_\__,_|\__,_|_|\___/ 
+                          
+  ____                                          _     
+ / ___|___  _ __ ___  _ __ ___   __ _ _ __   __| |___ 
+| |   / _ \| '_ ` _ \| '_ ` _ \ / _` | '_ \ / _` / __|
+| |__| (_) | | | | | | | | | | | (_| | | | | (_| \__ \
+ \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|___/
+
+*/
 /*  
  * Perfom action for reveived command
  *
@@ -155,9 +171,9 @@ static int pausefr_state(void)
 static int resume_state(void) 
 {
 	response_packet = status_packet;
-
+	
 	response_packet.cmd = cChanging;
-	response_packet.flags = 0x0001; // done
+	response_packet.flags = 0x0001;
     return reply;
 }
 
@@ -166,7 +182,7 @@ static int resumep_state(void)
 	response_packet = status_packet;
 
 	response_packet.cmd = cChanging;
-	response_packet.flags = 0x0001; // done
+	response_packet.flags = 0x0001;
     return reply;
 }
 
@@ -184,23 +200,19 @@ static int repeatoff_state(void)
 {
 	response_packet = status_packet;
 
-	response_packet.cmd = cPreparing;
 	response_packet.flags &= ~0xCA0;
 
-	//status_packet.cmd = cPreparing;
 	status_packet.flags &= ~0xCA0;
-    return reply;
+    return ok;
 }
 
 static int repeatone_state(void) 
 {
 	response_packet = status_packet;
 
-	response_packet.cmd = cPreparing;
 	response_packet.flags &= ~0xCA0;
 	response_packet.flags |= 0x400;
 
-	//status_packet.cmd = cPreparing;
 	status_packet.flags &= ~0xCA0;
 	status_packet.flags |=  0x400;
     return ok;
@@ -210,11 +222,9 @@ static int repeatall_state(void)
 {
 	response_packet = status_packet;
 
-	response_packet.cmd = cPreparing;
 	response_packet.flags &= ~0xCA0;
 	response_packet.flags |= 0x800;
 
-	//status_packet.cmd = cPreparing;
 	status_packet.flags &= ~0xCA0;
 	status_packet.flags |=  0x800;
     return ok;
@@ -224,11 +234,9 @@ static int scan_state(void)
 {
 	response_packet = status_packet;
 
-	response_packet.cmd = cPreparing;
 	response_packet.flags &= ~0xCA0;
 	response_packet.flags |= 0x080;
 
-	//status_packet.cmd = cPreparing;
 	status_packet.flags &= ~0xCA0;
 	status_packet.flags |=  0x080;
     return ok;
@@ -238,14 +246,12 @@ static int mix_state(void)
 {
 	response_packet = status_packet;
 
-	response_packet.cmd = cPreparing;
 	response_packet.flags &= ~0xCA0;
 	response_packet.flags |= 0x020;
 
-	//status_packet.cmd = cPreparing;
 	status_packet.flags &= ~0xCA0;
 	status_packet.flags |=  0x020;
-    return reply;
+    return ok;
 }
 
 static int select_state(void) 
@@ -283,6 +289,20 @@ static int status_state(void)
 
 
 
+/*
+  ____ _                                 
+ / ___| |__   __ _ _ __   __ _  ___ _ __ 
+| |   | '_ \ / _` | '_ \ / _` |/ _ \ '__|
+| |___| | | | (_| | | | | (_| |  __/ |   
+ \____|_| |_|\__,_|_| |_|\__, |\___|_|   
+                         |___/           
+  ____                                          _     
+ / ___|___  _ __ ___  _ __ ___   __ _ _ __   __| |___ 
+| |   / _ \| '_ ` _ \| '_ ` _ \ / _` | '_ \ / _` / __|
+| |__| (_) | | | | | | | | | | | (_| | | | | (_| \__ \
+ \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|___/
+
+*/
 /*  
  * If we send out a reply to a command, the receiver decodes it like any other one...
  * This "echo" can be used to trigger a new command coming from our emulator.
@@ -297,53 +317,53 @@ static int ping_self(void)
 
 static int ack_self(void) 
 {
-	response_packet = status_packet;
+	// ToDo: Prevent loop with cStatus replying with cAck
+	//if (response_packet.flags & C_UNUSED) {
+	//	response_packet.cmd = eInvalid;
+	//	response_packet.flags &= ~ C_UNUSED;
+	//	return ok;
+	//}
 
-	if (last_radiocmd == rStatus) {
-		response_packet.cmd = cStatus;
-		response_packet.track = INT2BCD(99);
-		response_packet.minutes = INT2BCD(99);
-		response_packet.seconds = INT2BCD(99);
-	    return reply;
-
-	} else if (last_radiocmd == rResume) {
-		response_packet.cmd = cPaused;
-		response_packet.flags &= ~0x00B;
-		response_packet.flags |=  0x002;
-
-		status_packet.cmd = cPaused;
-		status_packet.flags &= ~0x00B;
-		status_packet.flags |=  0x002;
+	/* After changing we switch to play mode */
+	if (last_radiocmd == rSelect) {
+		response_packet.cmd = cPlaying;
+		response_packet.flags = 0x001;
+		
+		status_packet.cmd = cPlaying;
+		status_packet.flags = 0x001;
 		return reply;
 
-	} else if (last_radiocmd == rSelect) {
-		response_packet.cmd = cPlaying;
+	/* After resuming we have to send a Disc Status update */
+	} else if (last_radiocmd == rResume) {
+		response_packet.cmd = cStatus;
 		response_packet.flags &= ~0x00B;
 		response_packet.flags |=  0x001;
 
-		status_packet.cmd = cPlaying;
-		status_packet.flags &= ~0x00B;
-		status_packet.flags |=  0x001;
-		return ok;
+	} else if (last_radiocmd == rResumeP) {
+		response_packet.cmd = cStatus;
+		response_packet.flags &= ~0x00B;
+		response_packet.flags |=  0x002;
+
+	/* After power-up we have to send a Disc Status update */
+	} else if (last_radiocmd == rStatus) {
+		response_packet.cmd = cStatus;
 
 	} else
-		return ok;
+		response_packet.cmd = cAck;
+
+	if (response_packet.cmd == cStatus) {
+		response_packet.disk = status_packet.disk;
+		response_packet.track = INT2BCD(99);
+		response_packet.minutes = INT2BCD(99);
+		response_packet.seconds = INT2BCD(99);
+		return reply;
+	}
+
+	return ok;
 }
 
 static int preparing_self(void) 
 {
-	response_packet = status_packet;
-
-	if (status_packet.flags & 0x01) {
-		response_packet.cmd = cPlaying;
-		status_packet.cmd = cPlaying;
-		return reply;
-
-	} else if (status_packet.flags & 0x02) {
-		response_packet.cmd = cPaused;
-		status_packet.cmd = cPaused;
-		return reply;
-	} 
     return ok;
 }
 
@@ -365,22 +385,15 @@ static int paused_self(void)
 
 static int playing_self(void) 
 {
-	response_packet = status_packet;
-
-	response_packet.cmd = cPlaying;
-	response_packet.flags &= ~0x00B;
-	response_packet.flags |=  0x001;
-
 	status_packet.cmd = cPlaying;
 	status_packet.flags &= ~0x00B;
 	status_packet.flags |=  0x001;
-    return play;
+    return ok;
 }
 
 static int spinup_self(void) 
 {
-	response_packet.cmd = cAck;
-    return reply;
+    return ok;
 }
 
 static int forwarding_self(void) 
@@ -406,6 +419,7 @@ static int lastinfo_self(void)
 static int changing_self(void) 
 {
 	response_packet.cmd = cAck;
+	response_packet.flags = 0x0001; // done
     return reply;
 }
 
@@ -436,11 +450,10 @@ static int nomagazin_self(void)
 
 static int status_self(void) 
 {
-	response_packet = status_packet;
-
-	response_packet.cmd = cSpinup;
-	response_packet.flags = 0x0001; // play
-    return reply;
+	//response_packet.cmd = cAck;
+    //response_packet.flags |= C_UNUSED;	// ToDo Perevent loop with cAck
+    //return reply;
+    return ok;
 }
 
 static int status1_self(void) 
@@ -457,7 +470,7 @@ static int status2_self(void)
 /* Array von Funktions-Pointern für jeden Zustand. Muss synchron mit o.g. Array-Auflistung (enum state_codes) sein !!! */
 int (*cmd_state[])(void) = {
 	idle_state,
-	// radio to changer 
+	// Radio to Changer 
 	ping_state,
 	play_state,
 	pause_state,
@@ -478,7 +491,7 @@ int (*cmd_state[])(void) = {
 	mix_state,
 	select_state,
 	status_state,
-	// changer to radio
+	// Changer to Radio
 	ping_self,
 	ack_self,
 	preparing_self,
@@ -502,6 +515,7 @@ int (*cmd_state[])(void) = {
 };
 
 
+#if 0
 /* Transitions-Tabelle für jeden Zustand */
 struct transition state_transitions[] = {
 
@@ -529,7 +543,6 @@ struct transition state_transitions[] = {
 	/* Transition für end wird nicht benötigt, da nie erreicht ... */
 };
 
-
 /* fetch new destination state depending on return code of current state */
 static command_t lookup_transitions(command_t current, enum ret_codes ret)
 {
@@ -553,7 +566,7 @@ static command_t lookup_transitions(command_t current, enum ret_codes ret)
 
 	return temp;
 }
-
+#endif
 
 /* Main motor control routine */
 void mbus_control (const mbus_data_t *inpacket)
@@ -575,15 +588,10 @@ void mbus_control (const mbus_data_t *inpacket)
     if (ok == rc)
     	return;
 
-    /* In case of playing, skip bcse we are sending every 500ms anyway */
-    if (play == rc)
-    	return;
-
+    /* We reply immediately to the received command, if we have to */
     if (reply == rc) {
     	mbus_encode(&response_packet, mbus_outbuffer);
-    	mbus_send();
-    	mbus_receive();
+    	mbus_send_wait();
     }
 
-    //cur_cmd = lookup_transitions(cur_cmd, rc);
 }

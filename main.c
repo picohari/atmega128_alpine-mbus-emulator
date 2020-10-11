@@ -90,7 +90,7 @@ static void init (void) {
 		hd44780_cursor(0, 0);
 	#endif
 
-    LOG_INFO("M-BUS Adapter 1.2\n");
+    LOG_INFO("M-BUS Adapter 1.2a");
 }
 
 
@@ -119,33 +119,38 @@ int main (void) {
 
             if (player_sec == 5400)   // after 90 minutes reset the counter
                 player_sec = 0;
+
+            /* update status packet information about playing time */
+            status_packet.minutes = INT2BCD(player_sec / 60);
+            status_packet.seconds = INT2BCD(player_sec % 60);
         }
 
-        /* update status packet information about playing time */
-        status_packet.minutes = INT2BCD(player_sec / 60);
-        status_packet.seconds = INT2BCD(player_sec % 60);
 
-#if 1
         /* send every 500ms a new status packet to the head-unit */
         static uint32_t sending_ticks = 0;
         if (timer_ms_passed(&sending_ticks, 500)) {
 
             if (status_packet.cmd == cPlaying ) {
-                //mbus_process(&in_packet, mbus_outbuffer, true); 
+                //mbus_process(&in_packet, mbus_outbuffer, true);
+
+                response_packet.minutes = status_packet.minutes;
+                response_packet.seconds = status_packet.seconds; 
+
                 mbus_encode(&response_packet, mbus_outbuffer);
+                mbus_send();
             }
         }
-#endif
 
+        /* receive new message on bus and decode it */
         mbus_receive();
 
+        /* send new message to bus */
         mbus_send();
-
 
          /* Show info about disk, track and playing status */
         #ifdef HD44780_AVAILABLE
             hd44780_cursor(1, 1);
-            hd44780_printf("D:%d T:%02d %02d:%02d", status_packet.disk, BCD2INT(status_packet.track), player_sec / 60, player_sec % 60);
+            hd44780_printf("D:%d T:%02d %02d:%02d", status_packet.disk, BCD2INT(status_packet.track), BCD2INT(status_packet.minutes), BCD2INT(status_packet.seconds));
         
             /* Show info about selected repeat mode */
             hd44780_cursor(1, 16);
@@ -181,10 +186,10 @@ int main (void) {
             hd44780_cursor(2, 14); (status_packet.flags & 0x0004) ? hd44780_data('1') : hd44780_data('0');
             hd44780_cursor(2, 15); (status_packet.flags & 0x0002) ? hd44780_data('1') : hd44780_data('0');
             hd44780_cursor(2, 16); (status_packet.flags & 0x0001) ? hd44780_data('1') : hd44780_data('0');
+            #endif
             
             hd44780_cursor(3, 1);
             hd44780_printf("%03d", last_radiocmd);
-            #endif
 
 
         #endif

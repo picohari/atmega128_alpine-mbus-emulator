@@ -1,0 +1,433 @@
+
+Original logs from ALPINE 7525R head unit to CD changer 5960
+
+Each line is a single message reveived:
+
+>       = begin of message
+ ...    = data on bus
+    |R| = origin from radio
+    |C| = origin from cd changer
+
+
+## POWER UP I
+
+M-BUS Adapter 1.2a
+>199|R|                 Some info?         
+>9F000061|C|            Ack/Wait           
+>11182C|R|              Pause fr curr. pos.
+>9C30199000008|C|       Disk Status: D:3, T:99 00:00        
+>111406|R|              Stop               
+>9F00956D|C|            Ack/Wait           
+>9F00956D|C|            Ack/Wait           
+>9C30199000008|C|       Disk Status: D:3, T:99 00:00       
+>111406|R|              Stop               
+>9A00000000004|C|       Some powerup?      
+>9D000000005|C|         Some status?       
+>9B93000000A3|C|        Changing D:3 T:0 done                     
+>111406|R|              Stop               
+>99200010000000AA|C|    Stopped            
+>99200010000000AA|C|    Stopped            
+>18A|R|                 Ping               
+>982|C|                 Ping OK            
+>18A|R|                 Ping               
+>982|C|                 Ping OK 
+
+
+
+
+
+## POWER UP II
+
+M-BUS Adapter 1.2a
+>>199|R|                Some info?         
+>9F000061|C|            Ack/Wait           
+>11182C|R|              Pause fr curr. pos.
+>9C30199000008|C|       Disk Status D:3 T:99 00:00         
+>111406|R|              Stop               
+>9A00000000004|C|       Some powerup?      
+>9F00956D|C|			Ack
+>9F00956D|C|			Ack
+>111406|R|              Stop
+>9C30199000008|C|       Disk Status D:3 T:99 00:00        
+>9A00000000004|C|       Some powerup?      
+>9D000000005|C|         Some status?       
+>111406|R|              Stop               
+>9B93000000A3|C|        Changing D:3 T:0 done           
+>99200010000000AA|C|    Stopped            
+>18A|R|                 Ping               
+>982|C|                 Ping OK            
+>18A|R|                 Ping               
+>982|C|                 Ping OK
+
+
+## PRESSED PLAY AFTER POWER UP
+
+>111011|R|              Play               
+>111011|R|              Play               
+>9920001000000013|C|    Stopped            
+>9920001000000013|C|    Stopped            
+>9F00956D|C|			Ack
+>9B8300000019|C|        Changing Phase 4   
+>9F00956D|C|			Ack
+>9B930000001A|C|        Changing D:3 T:0 done           
+>9910001000000012|C|    Preparing          
+>9F00956D|C|			Ack
+>9C30113734174|C|       Disk Status D:3 T:13 73:41        
+>9D000000005|C|         Some status?       
+>9950101000000015|C|    Spinup             
+>9F00956D|C|			Ack
+>9940101000000016|C|    Playing            
+>9940101000100015|C|    Playing            
+>9940101000200018|C|    Playing            
+>9940101000300017|C|    Playing            
+>9940101000400012|C|    Playing
+
+
+## PRESSED ANOTHER CD
+
+>113100104|R|           Select D:1 T:0 Play             
+>9F00956D|C|			Ack
+>9B910010001B|C|        Changing D:1 T:0 done busy ready ?          
+>9920001000000013|C|    Stopped            
+>9F00956D|C|			Ack
+>9BD10010001F|C|        Changing Phase 1   
+>9F006573|C|			Ack
+>9BB100100019|C|        Changing Phase 2   
+>9F002959|C|			Ack
+>9BC100100010|C|        Changing Phase 3   
+>9F00296C|C|			Ack
+>9B810010001C|C|        Changing Phase 4   
+>9F005763|C|			Ack
+>9B910000001C|C|        Changing D:1 done          
+>9F005763|C|			Ack
+>9910001000000012|C|    Preparing          
+>18A|R|                 Ping               
+>982|C|                 Ping OK            
+>9F005763|C|			Ack
+>9C10118770973|C|       Disk Status D:1 T:18 77:09        
+>9D000000005|C|         Some status?       
+>9950101000000015|C|    Spinup             
+>9F005763|C|			Ack
+>9940101000000016|C|    Playing            
+>9940101000100015|C|    Playing            
+>9940101000200018|C|    Playing            
+>9940101000300017|C|    Playing            
+>9940101000400012|C|    Playing
+
+
+## PRESSED SKIP NEXT
+
+>113002101|R|           Select D:0 T:2 Play             
+>9F005763|C|			Ack
+>9B910200001A|C|        Changing           
+>9950201000000018|C|    Spinup             
+>9F005763|C|			Ack
+>9940201000000017|C|    Playing            
+>9940201000100018|C|    Playing            
+>9940201000200015|C|    Playing
+
+
+## ..AGAIN
+
+>113003102|R|           Select D:0 T:3 Play             
+>9F005763|C|			Ack
+>9B9103000019|C|        Changing           
+>9950301000000017|C|    Spinup             
+>9F005763|C|			Ack
+>9940301000000018|C|    Playing            
+>9940301000100017|C|    Playing            
+>9940301000200016|C|    Playing            
+
+
+## ..AGAIN
+
+>113004107|R|           Select D:0 T:4 Play             
+>9F005763|C|			Ack
+>9B9104000010|C|        Changing           
+>9950401000000012|C|    Spinup             
+>9F005763|C|			Ack
+>9940401000000011|C|    Playing            
+>9940401000100012|C|    Playing
+>9940401000200013|C|    Playing
+
+
+## POWER OFF WAS PLAYING
+
+>111406|R| Stop               
+>9940501000300013|C|    Playing            
+>9F005763|C|			Ack
+>992050100030009D|C|    Stopped            
+>111406|R|              Stop               
+>992050100030009D|C|    Stopped            
+>18A|R|                 Ping               
+>982|C|                 Ping OK            
+
+
+## MIX ON
+
+>9940101000600014|C| 	Playing            
+>114020007|R| 			Mix                
+>9F005763|C|			OK
+>9951001000002017|C| 	Spinup             
+>9941001000102017|C| 	Playing            
+
+
+## SCAN
+
+>9941501000400015|C| 	Playing            
+>11408000D|>R| 			Scan               
+>994150100040801D|C| 	Playing 
+
+
+## REPEAT ONE
+
+>9941501001200014|C| 	Playing            
+>114400001|R| 			Repeat One         
+>9941501001240018|C| 	Playing 
+
+
+## REPEAL ALL
+
+>9941501001440012|C| 	Playing            
+>11480000D|>R| 			Repeat All         
+>9941501001540011|C| 	Playing
+
+
+## ALL PROGRAM MODES OFF
+
+>9941501000102014|C|	Playing            
+>114000005|R| 			Repeat Off         
+>9941501000100012|C| 	Playing            
+
+
+## PRESSED PAUSE WAS PLAYING
+
+>9940101000500011|C| 	Playing            
+>111024|R| 				Pause              
+>9930101000500025|C| 	Paused             
+>9F005763|C|			Ack
+>9C10118770973|C| 		Disk Status        
+>9D000000005|C| 		Some status?       
+>9930101000500025|C| 	Paused             
+>18A|R| 				Ping               
+>982|C| 				Ping OK            
+
+
+## PRESSED PLAY WAS PAUSED
+
+>18A|R| 				Ping               
+>982|C| 				Ping OK            
+>111011|R| 				Play               
+>9F005763|C|			Ack
+>9940101000500011|C| 	Playing            
+
+
+
+
+
+M-BUS Adapter 1.2a
+>199|R|                 Some info?         
+>9F000061|C|            Ack/Wait           
+>11182C|R|              Pause fr curr. pos.
+>9C30199000008|C|       Disk Status: D:3, T:99 00:00        
+>111406|R|              Stop               
+>9F000061|C|            Ack/Wait           
+>9F00956D|C|
+>9F00956D|C|
+>9C30199000008|C|       Disk Status: D:3, T:99 00:00        
+>111406|R|              Stop               
+>9A00000000004|C|       Some powerup?      				// Maybe asking radio what to do...
+>9D000000005|C|         Some status?       				// Send PLAYER status
+>111406|R|              Stop               
+>9B93000000A3|C|        Changing D:3 T:0 done           // CHANGE done (ready?)
+>99200010000000AA|C|    Stopped							// PLAYER stop 	-- FINISH
+>18A|R|                 Ping               
+>982|C|                 Ping OK
+
+>111011|R|              Play               				// PRESS PLAYER play
+>111011|R|              Play               				// i said..
+>9920001000000013|C|    Stopped            				// PLAYER is stopped
+>9920001000000013|C|    Stopped            
+>9F00956D|C|            								// WAIT
+>9B8300000019|C|        Changing Phase 4   				// CHANGE to same disk -> 4
+>9F00956D|C|											// WAIT
+>9B930000001A|C|        Changing D:3 done           	// CHANGE done
+>9910001000000012|C|    Preparing          				// PREPARING
+>9F00956D|												// OK 			-- FINISH
+>18A|R|
+>?9C30113734174|C|      Disk Status D:3 T:13 73:41      // Send DISC status
+>9D000000005|C|         Some status?       				// Send PLAYER status
+>9950101000000015|C|    Spinup             				// SPINUP
+>982|C|                 Ping OK            				// OK 			-- FINISH
+>9F00956D|C|
+>9940101000000016|C|    Playing            				// PLAYING must start immediately!
+>9940101000000016|C|    Playing            
+>9940101000100015|C|    Playing            
+>9940101000200018|C|    Playing            
+>9940101000300017|C|    Playing            
+>9940101000400012|C|    Playing
+
+>111024|R|              Pause              				// PRESS PLAYER pause
+>9F00956D|C|											// OK
+>9930101000400026|C|    Paused             				// REPLY pause
+>9F00956D|C|											// WAIT
+>9C30113734174|C|       Disk Status D:3 T:13 73:41      // Send DISC status
+>9D000000005|C|         Some status?       				// Send PLAYER status
+>9930101000400026|C|    Paused             				// PLAYER pause -- FINISH
+>18A|R|                 Ping               
+>982|C|                 Ping OK            
+>111406|R|              Stop               				// PLAYER stop
+>9F00956D|C|											// OK
+>99201010004000AD|C|    Stopped            				// PLAYER stop  -- FINISH
+>18A|R|                 Ping               
+>982|C|                 Ping OK            
+
+
+
+
+
+
+## PAUSED CHANGE DISK 5
+
+>18A|R| 				Ping               
+>982|C| 				Ping OK            
+>113500205|R| 			Select             
+>9F00956D|C|			Ack
+>9B950010002E|C| 		Changing           
+>9F00856E|C|			Ack
+>9BD50010002A|C| 		Changing Phase 1   
+>9920001000000022|C| 	Stopped            
+>9F006452|C|
+>9BB500100020|C| 		Changing Phase 2   
+>9F00A45E|C|
+>9BC500100029|C| 		Changing Phase 3   
+>9F00A560|C|
+>9B850010002D|C| 		Changing Phase 4   
+>9F00D479|C|
+>9B950000002D|C| 		Changing           
+>9F00D46A|C|
+>9910001000000023|C| 	Preparing          
+>18A|R| 				Ping               
+>982|C| 				Ping OK            
+>9F00D46A|C|
+>9C50117661171|C| 		Disk Status        
+>9D000000005|C| 		Some status?       
+>9950101000000028|C| 	Spinup             
+>9F00D46A|C|
+>9930101000000022|C| 	Paused             
+>18A|R| 				Ping               
+>982|C| 				Ping OK
+
+
+## PAUSED CHANGE DISK 3
+
+>18A|R| 				Ping               
+>982|C| 				Ping OK            
+>113300203|R| 			Select             
+>9F005763|C|
+>9B930010002C|C| 		Changing           
+>9F004764|C|
+>9BD300100020|C| 		Changing Phase 1   
+>9920001000000022|C| 	Stopped            
+>9F00297B|C|
+>9BB30010002A|C| 		Changing Phase 2   
+>9F006654|C|
+>9BC30010002F|C| 		Changing Phase 3   
+>9F006762|C|
+>9B830010002B|C| 		Changing Phase 4   
+>9F00956D|C|
+>9B930000002B|C| 		Changing           
+>9F00956D|C|
+>9910001000000023|C| 	Preparing          
+>18A|>R| 				Ping               
+>9F00956D|C|
+>9C30113734174|C| 		Disk Status        
+>9D000000005|C| 		Some status?       
+>9950101000000028|C| 	Spinup             
+>982|C| 				Ping OK            
+>9F00956D|C|
+>9930101000000022|C| 	Paused             
+>18A|R| 				Ping               
+>982|C| 				Ping OK 
+
+
+## POWER ON, PLAY PAUSE POWER OFF
+
+>>199|R| 				Some info?         				// connected to battery
+>9F000061|C| 			Ack/Wait           
+11182C|>R| 				Pause fr curr. pos.
+9C50199000002|C| 		Disk Status        
+111406|R| 				Stop               
+>9A00000000004|C| 		Some powerup?      
+>9F00D46A|C|
+>9F00D46A|C|
+>111406|C|				Stop
+>9C50199000002|C| 		Disk Status        
+>9A00000000004|C| 		Some powerup?      
+>9D000000005|C| 		Some status?       
+>111406|R|  			Stop               
+9B95000000A5|C| 		Changing           
+>99200010000000AA|C| 	Stopped            
+>99200010000000AA|C| 	Stopped            				// last message, ping ...
+>18A|R| 				Ping               
+>982|C| 				Ping OK
+
+>111011|R| 				Play               				// push CD play
+>111011|R| 				Play               
+>9920001000000013|C| 	Stopped            
+>9920001000000013|C| 	Stopped            
+9F00D46A|C|
+>9B850000001F|C| 		Changing Phase 4   
+>9F00D46A|C|
+>9B9500000010|C| 		Changing           
+>9910001000000012|C| 	Preparing          
+>18A|R| 				Ping               
+>982|C| 				Ping OK
+>9F00D46A|C|
+>9C50117661171|C| 		Disk Status        
+>9D000000005|C| 		Some status?       
+>9950101000000015|C| 	Spinup             
+>9F00D46A|C|
+>9940101000000016|C| 	Playing            				// every 500ms ...
+>9940101000100015|C| 	Playing            
+>9940101000200018|C| 	Playing
+
+>111024|R| 				Pause              				// pushed CD pause
+>111024|R|  			Pause              
+9F00D46A|C|
+>9930101000200024|C| 	Paused             
+>9930101000200024|C| 	Paused             
+>9F00D46A|C|
+>9C50117661171|C| 		Disk Status        
+>9D000000005|C| 		Some status?       
+>9930101000200024|C| 	Paused             				// lastmessage, ping ...
+>18A|R| 				Ping               
+>982|C| 				Ping OK            
+
+
+>111406|R| 				Stop               				// pushed POWER off
+>9F00D46A|C|
+>99201010002000AB|C| 	Stopped            				// last message, ping ...
+>18A|R| 				Ping               
+>982|C| 				Ping OK         
+
+
+## PAUSED POWER ON
+
+>18A|R| 				Ping               				// pushed POWER on (not CD!)
+>982|C| 				Ping OK            
+>111024|R| 				Pause              
+>111024|>R| 			Pause              
+9920101000200023|C| 	Stopped            
+>9920101000200023|C| 	Stopped            
+>9F00D46A|C|
+>9F00D46A|C|
+>9C50117661171|C| 		Disk Status        
+>9F00D46A|C|
+>9D000000005|C| 		Some status?       
+>9B950100002E|C| 		Changing           
+>9910101000200022|C| 	Preparing          
+>9F00D46A|C|
+>9930101000200024|C| 	Paused             				// last message, ping ...
+>18A|R| 				Ping               
+>982|C| 				Ping OK            
